@@ -1,0 +1,23 @@
+{
+  "name": "@andreimaxim/pi-publish-extension",
+  "version": "0.0.1",
+  "description": "Pi extension for publishing sessions to the web",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test 'test/*.test.ts'",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt --write .",
+    "fmt:check": "oxfmt --check .",
+    "check": "oxlint && oxfmt --check ."
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.53.0"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

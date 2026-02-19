@@ -1,0 +1,20 @@
+{
+  "name": "@andreimaxim/pi-publish-server",
+  "version": "0.0.1",
+  "description": "Cloudflare Workers server for published Pi sessions",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt --write .",
+    "fmt:check": "oxfmt --check .",
+    "check": "oxlint && oxfmt --check ."
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250214.0",
+    "wrangler": "^4.6.0"
+  }
+}

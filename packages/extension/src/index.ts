@@ -63,7 +63,7 @@ export default function (pi: ExtensionAPI) {
                       {
                         type: "text",
                         text: [
-                          "Generate a short, descriptive title (max 10 words) for this conversation.",
+                          "Generate a short, descriptive title (max 6 words) for this conversation.",
                           "Return ONLY the title text, nothing else.",
                           "",
                           "<conversation>",

@@ -1,27 +1,32 @@
 {
   "name": "@andreimaxim/pi-publish",
   "version": "0.0.1",
-  "description": "Publish extension for pi",
+  "description": "Publish Pi sessions to the web",
   "license": "MIT",
+  "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/extension",
+    "packages/server"
+  ],
   "scripts": {
-    "test": "node --experimental-strip-types --test 'test/*.test.ts'",
-    "test:coverage": "node --experimental-strip-types --test --experimental-test-coverage 'test/*.test.ts'",
+    "test": "npm test --workspaces --if-present",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "fmt": "oxfmt --write .",
     "fmt:check": "oxfmt --check .",
-    "check": "oxlint && oxfmt --check ."
+    "check": "oxlint && oxfmt --check .",
+    "dev:server": "npm run dev -w @andreimaxim/pi-publish-server",
+    "deploy:server": "npm run deploy -w @andreimaxim/pi-publish-server"
   },
   "devDependencies": {
-    "@mariozechner/pi-coding-agent": "^0.53.0",
     "@typescript/native-preview": "^7.0.0-dev.20260217.1",
     "oxfmt": "^0.32.0",
     "oxlint": "^1.47.0"
   },
   "pi": {
     "extensions": [
-      "./src/index.ts"
+      "./packages/extension/src/index.ts"
     ]
   }
 }

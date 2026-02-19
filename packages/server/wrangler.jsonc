@@ -1,0 +1,6 @@
+{
+  "name": "pi-publish",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-18",
+  "compatibility_flags": ["nodejs_compat"]
+}

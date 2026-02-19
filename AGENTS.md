@@ -1,16 +1,28 @@
 # Publish Extension for Pi
 
-This is a **Pi coding agent extension** — a TypeScript module that extends [Pi](https://github.com/badlogic/pi-mono), a minimal terminal coding harness by Anthropic.
-
-## What This Extension Does
-
-Registers the `/publish` command for sharing content from Pi sessions.
+This is a monorepo containing a **Pi coding agent extension** and a **Cloudflare Workers server** for publishing and viewing shared Pi sessions.
 
 ## Project Structure
 
-| File       | Purpose                                      |
-| ---------- | -------------------------------------------- |
-| `index.ts` | Entry point. Registers the `/publish` command. |
+```
+packages/
+  extension/          Pi agent extension — registers the /publish command
+    src/index.ts      Entry point
+    package.json
+    tsconfig.json
+  server/             Cloudflare Workers server — renders published sessions
+    src/index.ts      Worker entry point
+    package.json
+    tsconfig.json
+    wrangler.jsonc    Cloudflare Workers config
+package.json          Workspace root (npm workspaces)
+AGENTS.md
+```
+
+| Workspace | Package name | Purpose |
+| --------- | ------------ | ------- |
+| `packages/extension` | `@andreimaxim/pi-publish-extension` | Pi extension: extracts session data, publishes to server |
+| `packages/server` | `@andreimaxim/pi-publish-server` | Cloudflare Worker: stores + renders published sessions |
 
 ## Pi Documentation
 
@@ -27,7 +39,7 @@ All Pi documentation lives inside the installed npm package:
 | **All docs**       | `/var/home/andrei/.local/share/mise/installs/node/24.13.0/lib/node_modules/@mariozechner/pi-coding-agent/docs/`                |
 | **Examples**       | `/var/home/andrei/.local/share/mise/installs/node/24.13.0/lib/node_modules/@mariozechner/pi-coding-agent/examples/extensions/` |
 
-**Always read `extensions.md` before modifying this code.** It covers the full extension API: events, tools, commands, UI methods, state management, and rendering. Cross-reference `tui.md` when working on components.
+**Always read `extensions.md` before modifying extension code.** It covers the full extension API: events, tools, commands, UI methods, state management, and rendering. Cross-reference `tui.md` when working on components.
 
 ## How Pi Extensions Work
 
@@ -57,17 +69,23 @@ Extensions are auto-discovered from:
 
 TypeScript works without compilation (loaded via [jiti](https://github.com/unjs/jiti)). Hot-reload with `/reload`.
 
-## Key APIs Used by This Extension
+## Key APIs Used by the Extension
 
 - **`pi.registerCommand()`** — Registers the `/publish` slash command.
 - **`ctx.hasUI`** — Guards against running in non-interactive modes (print, JSON).
 - **`ctx.ui.notify()`** — Shows toast notifications.
 - **Theme API** (`theme.fg()`, `theme.bold()`) — All text styling goes through the theme for consistency.
 
-## Guidelines for Modifying This Extension
+## Guidelines for Modifying This Project
 
+### Extension (`packages/extension`)
 1. **Read the docs first.** Load `extensions.md` and `tui.md` before making changes.
 2. **Use the theme for all colors.** Never hardcode ANSI escapes for foreground text — use `theme.fg("accent", ...)`, `theme.fg("muted", ...)`, etc.
 3. **Keep output truncated.** If adding tool output, use Pi's `truncateHead`/`truncateTail` utilities.
 4. **Handle cancellation.** All async work should respect `AbortSignal`.
 5. **Test interactively.** Run `pi` and type `/publish` to verify changes. Use `/reload` to pick up modifications without restarting.
+
+### Server (`packages/server`)
+1. **Use `wrangler dev`** (or `npm run dev:server` from root) for local development.
+2. **Deploy with `wrangler deploy`** (or `npm run deploy:server` from root).
+3. **Keep the Worker stateless** — use KV or R2 for persistence when needed.
