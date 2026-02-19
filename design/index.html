@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session — Terminal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #111111;
+    --surface: #191919;
+    --border: #2a2a2a;
+    --text: #e8e8e8;
+    --sub: #888888;
+    --dim: #555555;
+    --blue: #6cb6ff;
+    --green: #56d364;
+    --red: #f47067;
+    --orange: #e3b341;
+    --purple: #bc8cff;
+    --cyan: #76e3ea;
+    --teal: #56d4dd;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  ::selection {
+    background: rgba(108, 182, 255, 0.2);
+    color: var(--text);
+  }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
+
+  /* Masthead */
+  .masthead {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .masthead-date {
+    font-size: 11px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+  .masthead h1 {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  /* User prompt */
+  .prompt {
+    margin-bottom: 12px;
+    background: var(--surface);
+    border-left: 3px solid var(--blue);
+    border-radius: 0 4px 4px 0;
+    padding: 12px 16px;
+  }
+  .prompt-line {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .prompt-caret {
+    color: var(--blue);
+    font-weight: 700;
+    flex-shrink: 0;
+    user-select: none;
+    line-height: 1.6;
+  }
+  .prompt-text {
+    color: var(--text);
+    white-space: pre-wrap;
+    line-height: 1.7;
+  }
+
+  /* Assistant response block */
+  .response {
+    margin-bottom: 8px;
+    padding-left: 22px;
+  }
+
+  .response-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--dim);
+    margin-top: 8px;
+  }
+  .response-meta .model { font-weight: 400; }
+  .response-meta .stats { font-weight: 400; }
+
+  /* Thinking */
+  .thinking {
+    color: var(--sub);
+    font-size: 12px;
+    font-style: italic;
+    padding: 8px 12px;
+    border-left: 2px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .thinking::before { content: "\1F4AD"; margin-right: 6px; }
+
+  /* Tool calls */
+  .tool-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 12px;
+  }
+  .tool-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .tool-icon.ok { color: var(--green); }
+  .tool-icon.err { color: var(--red); }
+
+  .tool-name {
+    color: var(--blue);
+    font-weight: 500;
+  }
+  .tool-args {
+    color: var(--sub);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Tool output */
+  .tool-output {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: var(--sub);
+    margin: 4px 0 8px 22px;
+    max-height: 80px;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .tool-output.error {
+    border-color: rgba(244, 112, 103, 0.2);
+    color: var(--red);
+  }
+
+  /* Response text */
+  .resp-text {
+    color: var(--text);
+    padding: 10px 0 4px;
+    line-height: 1.75;
+  }
+  .resp-text strong { color: var(--orange); font-weight: 600; }
+  .resp-text code {
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--teal);
+  }
+  .resp-text ol, .resp-text ul {
+    padding-left: 20px;
+    margin: 6px 0;
+  }
+  .resp-text li {
+    margin-bottom: 3px;
+  }
+  .resp-text li::marker {
+    color: var(--dim);
+  }
+
+  /* Code blocks — rendered by Pierre, no manual styles needed */
+
+  /* Tables */
+  .resp-text table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 12px;
+  }
+  .resp-text th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--sub);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .resp-text td {
+    padding: 5px 10px;
+    border-bottom: 1px solid rgba(42, 42, 42, 0.5);
+    color: var(--text);
+  }
+  .resp-text td code {
+    font-size: 11px;
+  }
+
+  /* Pierre diffs & code blocks */
+  .resp-text diffs-container {
+    display: block;
+    margin: 10px 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+
+    /* Background & text — surface, not page bg */
+    --diffs-dark-bg: var(--surface);
+    --diffs-dark: var(--text);
+
+    /* Addition/deletion match page palette */
+    --diffs-addition-color-override: var(--green);
+    --diffs-deletion-color-override: var(--red);
+
+    /* Line numbers match dim text */
+    --diffs-fg-number-override: var(--dim);
+
+    /* Separators & context blend with surface */
+    --diffs-bg-separator-override: var(--bg);
+    --diffs-bg-context-override: var(--surface);
+
+    /* Gutter border */
+    --diffs-gap-style: 1px solid var(--border);
+
+    /* Fonts */
+    --diffs-font-family: 'JetBrains Mono', monospace;
+    --diffs-header-font-family: 'JetBrains Mono', monospace;
+    --diffs-font-size: 12px;
+    --diffs-line-height: 1.6;
+    --diffs-gap-inline: 8px;
+    --diffs-gap-block: 4px;
+  }
+
+  /* Turn separator */
+  .sep {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 20px 0;
+  }
+
+  /* Footer */
+  .foot {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+    font-size: 11px;
+    color: var(--dim);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="masthead">
+    <div class="masthead-date">Feb 18, 2026</div>
+    <h1>Building the /publish extension</h1>
+  </div>
+
+  <!-- Turn 1 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">I think I've been going at this extension the wrong way since what we're doing is basically generating a gist with an HTML markup. I think there are two parts to this problem:
+
+1. extract the current thread from the session into a JSON-like file
+2. publish the JSON on a web service
+
+What do you think?</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="thinking">The user is asking me to think about the architecture of their /publish extension for Pi. Let me first look at the current code to understand what they have, and also read the relevant Pi docs to understand what's available.</div>
+
+    <div class="tool-row">
+      <span class="tool-icon err">✗</span>
+      <span class="tool-name">read</span>
+      <span class="tool-args">index.ts</span>
+    </div>
+    <div class="tool-output error">ENOENT: no such file or directory, access 'index.ts'</div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">read</span>
+      <span class="tool-args">~/.../pi-coding-agent/docs/session.md</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">ls -la ~/Code/andreimaxim/pi-publish/</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">read</span>
+      <span class="tool-args">~/.../pi-coding-agent/docs/extensions.md</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">ls -la src/ designs/ sample/ test/</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">read</span>
+      <span class="tool-args">src/index.ts · src/session-parser.ts · src/html-renderer.ts</span>
+    </div>
+
+    <div class="resp-text">I think you're right — the current approach couples two concerns that should be separate.
+      <br><br>
+      <strong>What you have now:</strong> the extension extracts session data, renders HTML, and uploads a self-contained HTML file — all in one shot.
+      <br><br>
+      <strong>Better split:</strong>
+      <ol>
+        <li><strong>Extract</strong> — walk the session tree from the current leaf to root and produce a clean JSON file. This is a pure data transformation with no opinions about presentation.</li>
+        <li><strong>Publish</strong> — take that JSON and push it to a hosting service. The service can render it however it wants (or the JSON could be consumed by any frontend).</li>
+      </ol>
+    </div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">8.2s · 3.2k in · 230 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 2 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">I think it's worth just deleting everything in src/ and test/ first and just re-add a basic index.js that registers the /publish command</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">rm -f src/session-parser.ts src/html-renderer.ts</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">rm -f test/index.test.ts</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">write</span>
+      <span class="tool-args">src/index.ts — 439 bytes</span>
+    </div>
+
+    <div class="resp-text">Clean slate. <code>src/index.ts</code> just registers <code>/publish</code> with a stub notification, and <code>test/</code> is empty.</div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">4.1s · 8.1k in · 153 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 3 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">let's make the symlink for the current extension to the user-level, not project level, so I can test it from other projects.</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">ls -la ~/.pi/agent/extensions/ .pi/extensions/</span>
+    </div>
+
+    <div class="resp-text">There's already a project-local symlink. I'll remove it and add a global one instead.</div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">rm .pi/extensions/pi-publish && ln -s ... ~/.pi/agent/extensions/pi-publish</span>
+    </div>
+
+    <div class="resp-text">Done. Removed <code>.pi/extensions/pi-publish</code> (project-local) and created <code>~/.pi/agent/extensions/pi-publish</code> (global). <code>/publish</code> will now be available in any project.</div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">5.3s · 7.9k in · 214 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn: diff example -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">The SessionParser is too tightly coupled. Extract the tree walking into its own module so we can test it independently.</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="thinking">The user wants to separate the tree-walking logic from the parser. I'll extract a TreeWalker module that takes entries and provides branch/ancestors/descendants methods, then update SessionParser to use it.</div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">read</span>
+      <span class="tool-args">lib/session_parser.rb</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">write</span>
+      <span class="tool-args">lib/tree_walker.rb</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">edit</span>
+      <span class="tool-args">lib/session_parser.rb</span>
+    </div>
+
+    <div class="resp-text">Extracted <code>TreeWalker</code> into its own file. Here are the changes:
+
+      <div id="diff-1"></div>
+
+      <div id="diff-2"></div>
+
+      The tree-walking logic is now stateless and testable on its own — just pass any entries hash and a starting ID.
+    </div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">7.4s · 10.1k in · 380 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 4 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">Pi stores sessions in a tree-like format, right?</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="thinking">The user is asking about Pi's session format. I already read the session.md docs earlier in this conversation, so I can answer from what I know.</div>
+
+    <div class="resp-text">Yes. The session file is JSONL where each entry has an <code>id</code> and <code>parentId</code>, forming a tree. The first entry has <code>parentId: null</code>, and every subsequent entry points to its parent. Branching (via <code>/tree</code>) creates a new child off an earlier node.</div>
+    <div class="response-meta">
+      <span class="model">claude-sonnet-4-5</span>
+      <span class="stats">3.7s · 7.5k in · 189 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 5 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">OK, let's implement an initial draft of the extension that just creates a json file. Let's store them in an out/ folder.</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="thinking">The user wants to implement the /publish command so it extracts the current branch from the session and writes it as a JSON file to an out/ folder.</div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">write</span>
+      <span class="tool-args">src/index.ts — 1,434 bytes</span>
+    </div>
+
+    <div class="tool-row">
+      <span class="tool-icon ok">✓</span>
+      <span class="tool-name">bash</span>
+      <span class="tool-args">echo "out/" >> .gitignore</span>
+    </div>
+
+    <div class="resp-text">That's it. <code>/publish</code> now:
+      <ol>
+        <li>Grabs the session header + current branch</li>
+        <li>Filters down to just the message entries</li>
+        <li>Writes <code>out/&lt;session-id-prefix&gt;.json</code> with the raw messages</li>
+      </ol>
+      <br>
+      The JSON has the session metadata at the top and the full message objects as-is — no lossy transformation yet.
+    </div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">6.8s · 8.4k in · 256 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 6 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">Can you show me what the session parser would look like in Ruby?</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="thinking">The user wants to see a Ruby version of the session parser. I'll write a clean class that reads JSONL, builds the tree, and walks from leaf to root.</div>
+
+    <div class="resp-text">Here's a minimal session parser:
+
+      <div id="code-1"></div>
+
+      It reads the JSONL line by line, stores entries in a hash by ID, and <code>branch</code> walks from the leaf back to root via <code>parent_id</code>. The <code>messages</code> method filters to just message entries.
+    </div>
+    <div class="response-meta">
+      <span class="model">claude-opus-4-6</span>
+      <span class="stats">5.1s · 9.2k in · 412 out</span>
+    </div>
+  </div>
+
+  <hr class="sep">
+
+  <!-- Turn 7 -->
+  <div class="prompt">
+    <div class="prompt-line">
+      <span class="prompt-caret">❯</span>
+      <span class="prompt-text">What entry types can appear in a session and which ones end up in the LLM context?</span>
+    </div>
+  </div>
+
+  <div class="response">
+    <div class="resp-text">Here's the full breakdown:
+
+      <table>
+        <thead>
+          <tr><th>Entry type</th><th>Role</th><th>In LLM context?</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>session</code></td><td>Header</td><td>No</td><td>First line, metadata only</td></tr>
+          <tr><td><code>message</code></td><td>User / Assistant / ToolResult</td><td>Yes</td><td>Core conversation content</td></tr>
+          <tr><td><code>compaction</code></td><td>Summary</td><td>Yes</td><td>Replaces earlier messages when context is compressed</td></tr>
+          <tr><td><code>branch_summary</code></td><td>Summary</td><td>Yes</td><td>Context from an abandoned branch</td></tr>
+          <tr><td><code>custom_message</code></td><td>Extension</td><td>Yes</td><td>Extension-injected, shown if <code>display: true</code></td></tr>
+          <tr><td><code>custom</code></td><td>Extension</td><td>No</td><td>Extension state persistence only</td></tr>
+          <tr><td><code>model_change</code></td><td>Meta</td><td>No</td><td>Records model switch</td></tr>
+          <tr><td><code>thinking_level_change</code></td><td>Meta</td><td>No</td><td>Records thinking level change</td></tr>
+          <tr><td><code>label</code></td><td>Meta</td><td>No</td><td>User bookmark on an entry</td></tr>
+          <tr><td><code>session_info</code></td><td>Meta</td><td>No</td><td>Display name via <code>/name</code></td></tr>
+        </tbody>
+      </table>
+
+      The ones marked "Yes" are what <code>buildSessionContext()</code> collects when preparing the message list for the LLM. Everything else is metadata or extension state that stays out of the prompt.
+    </div>
+    <div class="response-meta">
+      <span class="model">claude-sonnet-4-5</span>
+      <span class="stats">2.9s · 7.8k in · 310 out</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>pi session &middot; 7a728ce4-7499-413a-aa96-1fb3d8e1399f</span>
+    <span>$0.87 total</span>
+  </div>
+
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "@pierre/diffs": "https://cdn.jsdelivr.net/npm/@pierre/diffs@beta/+esm"
+  }
+}
+</script>
+<script type="module">
+import {
+  File as PierreFile,
+  FileDiff,
+  parseDiffFromFile,
+  resolveThemes,
+  resolveLanguages,
+} from '@pierre/diffs';
+
+const TREE_WALKER_NEW = `# frozen_string_literal: true
+
+module TreeWalker
+  def branch(entries, from_id)
+    result = []
+    current = entries[from_id]
+
+    while current
+      result.unshift(current)
+      current = entries[current.parent_id]
+    end
+
+    result
+  end
+
+  def ancestors(entries, id)
+    branch(entries, id).tap(&:pop)
+  end
+
+  def descendants(entries, parent_id)
+    entries.values.select { |e| e.parent_id == parent_id }
+  end
+end
+`;
+
+const SESSION_PARSER_OLD = `# frozen_string_literal: true
+
+require "json"
+
+class SessionParser
+  Entry = Struct.new(:id, :parent_id, :type, :data)
+
+  attr_reader :header, :entries
+
+  def initialize(path)
+    @entries = {}
+    @header = nil
+    @leaf_id = nil
+
+    File.foreach(path) do |line|
+      raw = JSON.parse(line, symbolize_names: true)
+
+      if raw[:type] == "session"
+        @header = raw
+        next
+      end
+
+      entry = Entry.new(raw[:id], raw[:parentId], raw[:type], raw)
+      @entries[entry.id] = entry
+      @leaf_id = entry.id
+    end
+  end
+
+  def branch(from_id = @leaf_id)
+    result = []
+    current = @entries[from_id]
+
+    while current
+      result.unshift(current)
+      current = @entries[current.parent_id]
+    end
+
+    result
+  end
+
+  def messages
+    branch.select { |e| e.type == "message" }
+         .map { |e| e.data[:message] }
+  end
+end
+`;
+
+const SESSION_PARSER_NEW = `# frozen_string_literal: true
+
+require "json"
+require_relative "tree_walker"
+
+class SessionParser
+  include TreeWalker
+  Entry = Struct.new(:id, :parent_id, :type, :data)
+
+  attr_reader :header, :entries
+
+  def initialize(path)
+    @entries = {}
+    @header = nil
+    @leaf_id = nil
+
+    File.foreach(path) do |line|
+      raw = JSON.parse(line, symbolize_names: true)
+
+      if raw[:type] == "session"
+        @header = raw
+        next
+      end
+
+      entry = Entry.new(raw[:id], raw[:parentId], raw[:type], raw)
+      @entries[entry.id] = entry
+      @leaf_id = entry.id
+    end
+  end
+
+  def messages
+    branch(@entries, @leaf_id)
+      .select { |e| e.type == "message" }
+         .map { |e| e.data[:message] }
+  end
+end
+`;
+
+const DIFFS = [
+  {
+    target: 'diff-1',
+    oldFile: { name: 'lib/tree_walker.rb', contents: '' },
+    newFile: { name: 'lib/tree_walker.rb', contents: TREE_WALKER_NEW },
+  },
+  {
+    target: 'diff-2',
+    oldFile: { name: 'lib/session_parser.rb', contents: SESSION_PARSER_OLD },
+    newFile: { name: 'lib/session_parser.rb', contents: SESSION_PARSER_NEW },
+  },
+];
+
+const SESSION_PARSER_CODE = `# frozen_string_literal: true
+
+require "json"
+
+class SessionParser
+  Entry = Struct.new(:id, :parent_id, :type, :data)
+
+  attr_reader :header, :entries
+
+  def initialize(path)
+    @entries = {}
+    @header = nil
+    @leaf_id = nil
+
+    File.foreach(path) do |line|
+      raw = JSON.parse(line, symbolize_names: true)
+
+      if raw[:type] == "session"
+        @header = raw
+        next
+      end
+
+      entry = Entry.new(raw[:id], raw[:parentId], raw[:type], raw)
+      @entries[entry.id] = entry
+      @leaf_id = entry.id
+    end
+  end
+
+  def branch(from_id = @leaf_id)
+    result = []
+    current = @entries[from_id]
+
+    while current
+      result.unshift(current)
+      current = @entries[current.parent_id]
+    end
+
+    result
+  end
+
+  def messages
+    branch.select { |e| e.type == "message" }
+         .map { |e| e.data[:message] }
+  end
+end
+`;
+
+const CODE_BLOCKS = [
+  {
+    target: 'code-1',
+    file: { name: 'session_parser.rb', contents: SESSION_PARSER_CODE },
+  },
+];
+
+const sharedOptions = {
+  theme: { dark: 'pierre-dark', light: 'pierre-light' },
+  themeType: 'dark',
+  overflow: 'scroll',
+  disableFileHeader: true,
+};
+
+const diffOptions = {
+  ...sharedOptions,
+  diffStyle: 'unified',
+  hunkSeparators: 'line-info-basic',
+  disableFileHeader: false,
+};
+
+await resolveThemes(['pierre-dark', 'pierre-light']);
+await resolveLanguages(['ruby']);
+
+for (const { target, oldFile, newFile } of DIFFS) {
+  const el = document.getElementById(target);
+  if (!el) continue;
+
+  const fileDiff = parseDiffFromFile(oldFile, newFile);
+  const renderer = new FileDiff(diffOptions);
+  renderer.render({ oldFile, newFile, fileDiff, containerWrapper: el });
+}
+
+for (const { target, file } of CODE_BLOCKS) {
+  const el = document.getElementById(target);
+  if (!el) continue;
+
+  const renderer = new PierreFile(sharedOptions);
+  renderer.render({ file, containerWrapper: el });
+}
+</script>
+</body>
+</html>
