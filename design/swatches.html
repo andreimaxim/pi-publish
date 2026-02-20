@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light Mode Color Swatches — Pierre-aligned</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: #e4e4e7;
+    color: #1c1c1e;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 40px 24px 80px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-size: 12px;
+    color: #6b6b70;
+    margin-bottom: 40px;
+    max-width: 720px;
+    margin-inline: auto;
+    line-height: 1.7;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+
+  .panel-header {
+    padding: 16px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+
+  .panel.dark .panel-header {
+    background: #1f1f21;
+    color: #fbfbfb;
+    border-bottom: 1px solid #39393c;
+  }
+
+  .panel.light .panel-header {
+    background: #eeeeef;
+    color: #1c1c1e;
+    border-bottom: 1px solid #dbdbdd;
+  }
+
+  /* ── Swatch rows ── */
+  .swatches {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .panel.dark .swatches { background: #111111; }
+  .panel.light .swatches { background: #f8f8f8; }
+
+  .swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .chip {
+    width: 40px;
+    height: 28px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid rgba(128,128,128,0.2);
+  }
+
+  .swatch-label {
+    width: 100px;
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+
+  .swatch-hex {
+    width: 70px;
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+
+  .swatch-note {
+    flex: 1;
+    font-size: 10px;
+    opacity: 0.55;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .panel.dark .swatch-label { color: #adadb1; }
+  .panel.dark .swatch-hex   { color: #84848a; }
+  .panel.dark .swatch-note  { color: #84848a; }
+
+  .panel.light .swatch-label { color: #6c6c71; }
+  .panel.light .swatch-hex   { color: #84848a; }
+  .panel.light .swatch-note  { color: #84848a; }
+
+  .swatch-note .pierre { color: #009fff; font-weight: 600; }
+
+  .divider {
+    height: 1px;
+    margin: 6px 0;
+  }
+
+  .panel.dark .divider  { background: #39393c; }
+  .panel.light .divider { background: #dbdbdd; }
+
+  /* ── Preview section ── */
+  .preview {
+    padding: 20px;
+  }
+
+  .panel.dark .preview  { background: #111111; border-top: 1px solid #39393c; }
+  .panel.light .preview { background: #f8f8f8; border-top: 1px solid #dbdbdd; }
+
+  .preview-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+  }
+
+  .panel.dark .preview-label  { color: #84848a; }
+  .panel.light .preview-label { color: #84848a; }
+
+  /* ─ Preview: masthead ─ */
+  .p-date {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-bottom: 4px;
+  }
+
+  .panel.dark .p-date  { color: #84848a; }
+  .panel.light .p-date { color: #84848a; }
+
+  .p-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom-style: dashed;
+    border-bottom-width: 1px;
+  }
+
+  .panel.dark .p-title  { color: #fbfbfb; border-color: #39393c; }
+  .panel.light .p-title { color: #1c1c1e; border-color: #dbdbdd; }
+
+  /* ─ Preview: prompt ─ */
+  .p-prompt {
+    border-left: 3px solid;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .panel.dark .p-prompt  { background: #1f1f21; border-color: #009fff; }
+  .panel.light .p-prompt { background: #eeeeef; border-color: #009fff; }
+
+  .p-prompt-line {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .p-caret {
+    font-weight: 700;
+    flex-shrink: 0;
+    color: #009fff;
+  }
+
+  .panel.dark .p-prompt-text  { color: #fbfbfb; }
+  .panel.light .p-prompt-text { color: #1c1c1e; }
+
+  /* ─ Preview: thinking ─ */
+  .p-thinking {
+    border-left: 2px solid;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-style: italic;
+    margin-bottom: 10px;
+    margin-left: 18px;
+  }
+
+  .panel.dark .p-thinking  { border-color: #39393c; color: #adadb1; }
+  .panel.light .p-thinking { border-color: #dbdbdd; color: #6c6c71; }
+
+  /* ─ Preview: tool rows ─ */
+  .p-tool {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    margin-bottom: 4px;
+    margin-left: 18px;
+  }
+
+  .p-tool-icon {
+    width: 12px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .p-tool-name {
+    font-weight: 500;
+    color: #009fff;
+  }
+
+  .panel.dark .p-tool-args  { color: #adadb1; }
+  .panel.light .p-tool-args { color: #6c6c71; }
+
+  /* ─ Preview: tool output ─ */
+  .p-tool-output {
+    margin-left: 36px;
+    border: 1px solid;
+    padding: 6px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    white-space: pre-wrap;
+  }
+
+  .panel.dark .p-tool-output {
+    background: #141415;
+    border-color: #39393c;
+    color: #adadb1;
+  }
+
+  .panel.light .p-tool-output {
+    background: #f2f2f3;
+    border-color: #dbdbdd;
+    color: #6c6c71;
+  }
+
+  .panel.dark .p-tool-output.error {
+    color: #ff2e3f;
+    border-color: rgba(255, 46, 63, 0.25);
+  }
+
+  .panel.light .p-tool-output.error {
+    color: #ff2e3f;
+    border-color: rgba(255, 46, 63, 0.25);
+  }
+
+  /* ─ Preview: response text ─ */
+  .p-resp {
+    margin-left: 18px;
+    line-height: 1.7;
+  }
+
+  .panel.dark .p-resp  { color: #fbfbfb; }
+  .panel.light .p-resp { color: #1c1c1e; }
+
+  .panel.dark .p-resp strong  { color: #ffca00; }
+  .panel.light .p-resp strong { color: #9e5e00; }
+
+  .p-resp code {
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .panel.dark .p-resp code  { background: #1f1f21; color: #61d5c0; }
+  .panel.light .p-resp code { background: #eeeeef; color: #0e7a6e; }
+
+  /* ─ Preview: list ─ */
+  .p-resp ol {
+    padding-left: 20px;
+    margin: 6px 0;
+  }
+
+  .p-resp li {
+    margin-bottom: 3px;
+  }
+
+  .panel.dark .p-resp li::marker  { color: #84848a; }
+  .panel.light .p-resp li::marker { color: #84848a; }
+
+  /* ─ Preview: meta ─ */
+  .p-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-top: 10px;
+    margin-left: 18px;
+  }
+
+  .panel.dark .p-meta  { color: #84848a; }
+  .panel.light .p-meta { color: #84848a; }
+
+  /* ─ Preview: footer ─ */
+  .p-footer {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top-style: dashed;
+    border-top-width: 1px;
+  }
+
+  .panel.dark .p-footer  { color: #84848a; border-color: #39393c; }
+  .panel.light .p-footer { color: #84848a; border-color: #dbdbdd; }
+
+  /* ── Rationale section ── */
+  .rationale {
+    max-width: 1100px;
+    margin: 48px auto 0;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+    padding: 24px 28px;
+    line-height: 1.75;
+  }
+
+  .rationale h2 {
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  .rationale h3 {
+    font-size: 13px;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: #6c6c71;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .rationale p {
+    margin-bottom: 8px;
+  }
+
+  .rationale table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 12px 0;
+  }
+
+  .rationale th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #f5f5f6;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6c6c71;
+    border-bottom: 1px solid #dbdbdd;
+  }
+
+  .rationale td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+
+  .rationale .color-pip {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-right: 6px;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .rationale .same   { color: #008573; font-weight: 600; font-size: 10px; }
+  .rationale .adjust  { color: #9e5e00; font-weight: 600; font-size: 10px; }
+  .rationale .from-pierre { color: #009fff; font-weight: 600; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Light Mode Palette — Pierre-aligned</h1>
+<p class="subtitle">
+  Surfaces and grays drawn from Pierre's <code>pierre-light</code> theme.
+  Accents kept identical where contrast allows; darkened only for
+  <code>&lt;strong&gt;</code> and <code>&lt;code&gt;</code> prose readability.
+</p>
+
+<div class="grid">
+
+  <!-- ════════ DARK (current) ════════ -->
+  <div class="panel dark">
+    <div class="panel-header">Dark Mode (current)</div>
+    <div class="swatches">
+      <div class="swatch-row">
+        <div class="chip" style="background:#111111"></div>
+        <span class="swatch-label">--bg</span>
+        <span class="swatch-hex">#111111</span>
+        <span class="swatch-note">page background</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#1f1f21"></div>
+        <span class="swatch-label">--surface</span>
+        <span class="swatch-hex">#1f1f21</span>
+        <span class="swatch-note">prompt bg, inline code bg</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#141415"></div>
+        <span class="swatch-label">--surface-soft</span>
+        <span class="swatch-hex">#141415</span>
+        <span class="swatch-note">tool output bg</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#39393c"></div>
+        <span class="swatch-label">--border</span>
+        <span class="swatch-hex">#39393c</span>
+        <span class="swatch-note">separators, dashed rules</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="swatch-row">
+        <div class="chip" style="background:#fbfbfb"></div>
+        <span class="swatch-label">--text</span>
+        <span class="swatch-hex">#fbfbfb</span>
+        <span class="swatch-note">primary body text</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#adadb1"></div>
+        <span class="swatch-label">--sub</span>
+        <span class="swatch-hex">#adadb1</span>
+        <span class="swatch-note">thinking, tool args, output</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#84848a"></div>
+        <span class="swatch-label">--dim</span>
+        <span class="swatch-hex">#84848a</span>
+        <span class="swatch-note">meta, footer, list markers</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="swatch-row">
+        <div class="chip" style="background:#009fff"></div>
+        <span class="swatch-label">--blue</span>
+        <span class="swatch-hex">#009fff</span>
+        <span class="swatch-note">prompt accent, tool names</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#00cab1"></div>
+        <span class="swatch-label">--green</span>
+        <span class="swatch-hex">#00cab1</span>
+        <span class="swatch-note">success ✓</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#ff2e3f"></div>
+        <span class="swatch-label">--red</span>
+        <span class="swatch-hex">#ff2e3f</span>
+        <span class="swatch-note">error ✗, error output</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#ffca00"></div>
+        <span class="swatch-label">--orange</span>
+        <span class="swatch-hex">#ffca00</span>
+        <span class="swatch-note">&lt;strong&gt; emphasis</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#61d5c0"></div>
+        <span class="swatch-label">--teal</span>
+        <span class="swatch-hex">#61d5c0</span>
+        <span class="swatch-note">inline &lt;code&gt;</span>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview">
+      <div class="preview-label">In-context preview</div>
+
+      <div class="p-date">Feb 19, 2026</div>
+      <div class="p-title">Building the /publish extension</div>
+
+      <div class="p-prompt">
+        <div class="p-prompt-line">
+          <span class="p-caret">❯</span>
+          <span class="p-prompt-text">Extract the tree walking into its own module so we can test it independently.</span>
+        </div>
+      </div>
+
+      <div class="p-thinking">💭 Analyzing the current coupling between parser and tree traversal…</div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">read</span>
+        <span class="p-tool-args">lib/session_parser.rb</span>
+      </div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#ff2e3f">✗</span>
+        <span class="p-tool-name">bash</span>
+        <span class="p-tool-args">ruby -c lib/tree_walker.rb</span>
+      </div>
+      <div class="p-tool-output error">SyntaxError: unexpected end</div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">write</span>
+        <span class="p-tool-args">lib/tree_walker.rb</span>
+      </div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">edit</span>
+        <span class="p-tool-args">lib/session_parser.rb</span>
+      </div>
+
+      <div class="p-resp">
+        Extracted <code>TreeWalker</code> into its own module. The <strong>tree-walking logic</strong> is now stateless and testable on its own.
+        <ol>
+          <li>New <code>lib/tree_walker.rb</code> with <code>branch</code>, <code>ancestors</code>, <code>descendants</code></li>
+          <li>Updated <code>SessionParser</code> to include the module</li>
+        </ol>
+      </div>
+
+      <div class="p-meta">
+        <span>claude-opus-4-6</span>
+        <span>7.4s · 10.1k in · 380 out</span>
+      </div>
+
+      <div class="p-footer">
+        <span>pi session · 7a728ce4</span>
+        <span>$0.87 total</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ LIGHT (proposed) ════════ -->
+  <div class="panel light">
+    <div class="panel-header">Light Mode (proposed)</div>
+    <div class="swatches">
+      <div class="swatch-row">
+        <div class="chip" style="background:#f8f8f8"></div>
+        <span class="swatch-label">--bg</span>
+        <span class="swatch-hex">#f8f8f8</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.background</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#eeeeef"></div>
+        <span class="swatch-label">--surface</span>
+        <span class="swatch-hex">#eeeeef</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.border</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#f2f2f3"></div>
+        <span class="swatch-label">--surface-soft</span>
+        <span class="swatch-hex">#f2f2f3</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> input.background</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#dbdbdd"></div>
+        <span class="swatch-label">--border</span>
+        <span class="swatch-hex">#dbdbdd</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> input.border</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="swatch-row">
+        <div class="chip" style="background:#1c1c1e"></div>
+        <span class="swatch-label">--text</span>
+        <span class="swatch-hex">#1c1c1e</span>
+        <span class="swatch-note">near Pierre #070707, softer</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#6c6c71"></div>
+        <span class="swatch-label">--sub</span>
+        <span class="swatch-hex">#6c6c71</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.foreground</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#84848a"></div>
+        <span class="swatch-label">--dim</span>
+        <span class="swatch-hex">#84848a</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> comments, shared both themes</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="swatch-row">
+        <div class="chip" style="background:#009fff"></div>
+        <span class="swatch-label">--blue</span>
+        <span class="swatch-hex">#009fff</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#00cab1"></div>
+        <span class="swatch-label">--green</span>
+        <span class="swatch-hex">#00cab1</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#ff2e3f"></div>
+        <span class="swatch-label">--red</span>
+        <span class="swatch-hex">#ff2e3f</span>
+        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#9e5e00"></div>
+        <span class="swatch-label">--orange</span>
+        <span class="swatch-hex">#9e5e00</span>
+        <span class="swatch-note">darkened — #ffca00 is 1.5:1 on white</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#0e7a6e"></div>
+        <span class="swatch-label">--teal</span>
+        <span class="swatch-hex">#0e7a6e</span>
+        <span class="swatch-note">darkened — #61d5c0 is 2.1:1 on white</span>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="preview">
+      <div class="preview-label">In-context preview</div>
+
+      <div class="p-date">Feb 19, 2026</div>
+      <div class="p-title">Building the /publish extension</div>
+
+      <div class="p-prompt">
+        <div class="p-prompt-line">
+          <span class="p-caret">❯</span>
+          <span class="p-prompt-text">Extract the tree walking into its own module so we can test it independently.</span>
+        </div>
+      </div>
+
+      <div class="p-thinking">💭 Analyzing the current coupling between parser and tree traversal…</div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">read</span>
+        <span class="p-tool-args">lib/session_parser.rb</span>
+      </div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#ff2e3f">✗</span>
+        <span class="p-tool-name">bash</span>
+        <span class="p-tool-args">ruby -c lib/tree_walker.rb</span>
+      </div>
+      <div class="p-tool-output error">SyntaxError: unexpected end</div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">write</span>
+        <span class="p-tool-args">lib/tree_walker.rb</span>
+      </div>
+
+      <div class="p-tool">
+        <span class="p-tool-icon" style="color:#00cab1">✓</span>
+        <span class="p-tool-name">edit</span>
+        <span class="p-tool-args">lib/session_parser.rb</span>
+      </div>
+
+      <div class="p-resp">
+        Extracted <code>TreeWalker</code> into its own module. The <strong>tree-walking logic</strong> is now stateless and testable on its own.
+        <ol>
+          <li>New <code>lib/tree_walker.rb</code> with <code>branch</code>, <code>ancestors</code>, <code>descendants</code></li>
+          <li>Updated <code>SessionParser</code> to include the module</li>
+        </ol>
+      </div>
+
+      <div class="p-meta">
+        <span>claude-opus-4-6</span>
+        <span>7.4s · 10.1k in · 380 out</span>
+      </div>
+
+      <div class="p-footer">
+        <span>pi session · 7a728ce4</span>
+        <span>$0.87 total</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rationale ── -->
+<div class="rationale">
+  <h2>Rationale: alignment with Pierre's <code>pierre-light</code></h2>
+
+  <h3>Surfaces — all from Pierre</h3>
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Pierre source</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>--bg</td>
+        <td><span class="color-pip" style="background:#111111"></span>#111111</td>
+        <td><span class="color-pip" style="background:#f8f8f8"></span>#f8f8f8</td>
+        <td class="from-pierre">sideBar.background</td>
+      </tr>
+      <tr>
+        <td>--surface</td>
+        <td><span class="color-pip" style="background:#1f1f21"></span>#1f1f21</td>
+        <td><span class="color-pip" style="background:#eeeeef"></span>#eeeeef</td>
+        <td class="from-pierre">sideBar.border, indent guide bg</td>
+      </tr>
+      <tr>
+        <td>--surface-soft</td>
+        <td><span class="color-pip" style="background:#141415"></span>#141415</td>
+        <td><span class="color-pip" style="background:#f2f2f3"></span>#f2f2f3</td>
+        <td class="from-pierre">input.background</td>
+      </tr>
+      <tr>
+        <td>--border</td>
+        <td><span class="color-pip" style="background:#39393c"></span>#39393c</td>
+        <td><span class="color-pip" style="background:#dbdbdd"></span>#dbdbdd</td>
+        <td class="from-pierre">input.border, active indent guide</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Text grays — from Pierre's foreground scale</h3>
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Pierre source</th><th>Ratio on --bg</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>--text</td>
+        <td><span class="color-pip" style="background:#fbfbfb"></span>#fbfbfb</td>
+        <td><span class="color-pip" style="background:#1c1c1e"></span>#1c1c1e</td>
+        <td>Softer than Pierre's #070707</td>
+        <td>16.2:1</td>
+      </tr>
+      <tr>
+        <td>--sub</td>
+        <td><span class="color-pip" style="background:#adadb1"></span>#adadb1</td>
+        <td><span class="color-pip" style="background:#6c6c71"></span>#6c6c71</td>
+        <td class="from-pierre">sideBar.foreground</td>
+        <td>4.8:1 ✓</td>
+      </tr>
+      <tr>
+        <td>--dim</td>
+        <td><span class="color-pip" style="background:#84848a"></span>#84848a</td>
+        <td><span class="color-pip" style="background:#84848a"></span>#84848a</td>
+        <td class="same">Same both themes (Pierre too)</td>
+        <td>3.5:1 (AA Large)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Accents — same where possible, darkened only when necessary</h3>
+  <table>
+    <thead>
+      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Change</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>--blue</td>
+        <td><span class="color-pip" style="background:#009fff"></span>#009fff</td>
+        <td><span class="color-pip" style="background:#009fff"></span>#009fff</td>
+        <td class="same">SAME</td>
+        <td>3.4:1 — used for short labels (tool names, caret), same as Pierre</td>
+      </tr>
+      <tr>
+        <td>--green</td>
+        <td><span class="color-pip" style="background:#00cab1"></span>#00cab1</td>
+        <td><span class="color-pip" style="background:#00cab1"></span>#00cab1</td>
+        <td class="same">SAME</td>
+        <td>2.9:1 — single-character checkmarks ✓, same as Pierre</td>
+      </tr>
+      <tr>
+        <td>--red</td>
+        <td><span class="color-pip" style="background:#ff2e3f"></span>#ff2e3f</td>
+        <td><span class="color-pip" style="background:#ff2e3f"></span>#ff2e3f</td>
+        <td class="same">SAME</td>
+        <td>4.0:1 — error text + marks, same as Pierre</td>
+      </tr>
+      <tr>
+        <td>--orange</td>
+        <td><span class="color-pip" style="background:#ffca00"></span>#ffca00</td>
+        <td><span class="color-pip" style="background:#9e5e00"></span>#9e5e00</td>
+        <td class="adjust">DARKENED</td>
+        <td>#ffca00 is 1.5:1 on white — invisible. Used for &lt;strong&gt; prose text</td>
+      </tr>
+      <tr>
+        <td>--teal</td>
+        <td><span class="color-pip" style="background:#61d5c0"></span>#61d5c0</td>
+        <td><span class="color-pip" style="background:#0e7a6e"></span>#0e7a6e</td>
+        <td class="adjust">DARKENED</td>
+        <td>#61d5c0 is 2.1:1 on --surface — invisible. Used for inline &lt;code&gt; text</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:16px; color:#6c6c71; font-size:12px;">
+    Pierre keeps <code>#009fff</code>, <code>#00cab1</code>, <code>#ff2e3f</code>, <code>#ffca00</code> identical across dark and light themes.
+    This works because Pierre uses them for tiny syntax tokens and line indicators.
+    Our template uses <code>--orange</code> and <code>--teal</code> for inline reading — bold phrases and code spans inside paragraphs —
+    so those two <em>must</em> be darkened to remain legible.
+  </p>
+</div>
+
+</body>
+</html>
