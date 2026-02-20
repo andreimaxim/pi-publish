@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
 import { renderSession } from "./renderer.js";
-import { buildPublishedSession, titleFromFirstUserLine } from "./transform.js";
+import { generateTitle } from "./title.js";
+import { buildPublishedSession } from "./transform.js";
 import type { BranchEntry } from "./transform.js";
 
 const extDir = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -52,8 +53,11 @@ export default function (pi: ExtensionAPI) {
         .filter((entry) => entry.type === "message")
         .map((entry) => entry.message);
 
-      const title = titleFromFirstUserLine(
+      ctx.ui.notify("Generating title…", "info");
+      const title = await generateTitle(
         messages as unknown as { role?: unknown; content?: unknown }[],
+        ctx.model,
+        ctx.modelRegistry,
       );
 
       const payload = buildPublishedSession(
@@ -105,8 +109,6 @@ export default function (pi: ExtensionAPI) {
         const viewerUrl = `${SHARE_VIEWER_URL}#${gistId}`;
 
         ctx.ui.notify(`Published → ${viewerUrl}`, "info");
-        ctx.ui.notify(`Gist: ${gistUrl}`, "info");
-        ctx.ui.notify(`Local copy: out/${slug}.html`, "info");
       } finally {
         // Clean up the temp file regardless of success or failure
         await unlink(tmpFile).catch(() => {});
