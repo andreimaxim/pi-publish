@@ -19,5 +19,8 @@
     "extensions": [
       "./src/index.ts"
     ]
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
   }
 }

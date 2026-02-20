@@ -1,4 +1,3 @@
-import { complete } from "@mariozechner/pi-ai";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { realpathSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -6,55 +5,11 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { renderSession } from "./renderer.js";
+import type { PublishedSession, Step, ToolStep, Turn } from "./types.js";
+
 const extDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const outDir = join(extDir, "out");
-
-// --- Types ---
-
-interface PublishedSession {
-  session: {
-    id: string;
-    title: string;
-    date: string;
-    totalCost: number;
-  };
-  turns: Turn[];
-}
-
-interface Turn {
-  prompt: string;
-  steps: Step[];
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  cost: number;
-  elapsed: number;
-}
-
-type Step = ThinkingStep | TextStep | ToolStep;
-
-interface ThinkingStep {
-  type: "thinking";
-  text: string;
-}
-
-interface TextStep {
-  type: "text";
-  text: string;
-}
-
-interface ToolStep {
-  type: "tool";
-  name: string;
-  args: string;
-  ok: boolean;
-  output?: string;
-  diff?: {
-    path: string;
-    oldText: string;
-    newText: string;
-  };
-}
 
 // --- Helpers ---
 
@@ -114,6 +69,26 @@ function extractTextContent(content: { type: string; text?: string }[]): string 
     .filter((c) => c.type === "text" && c.text)
     .map((c) => c.text!)
     .join("\n");
+}
+
+function titleFromFirstUserLine(
+  messages: { role?: unknown; content?: unknown }[],
+): string {
+  for (const msg of messages) {
+    if (msg.role !== "user") continue;
+
+    let text = "";
+    if (typeof msg.content === "string") {
+      text = msg.content;
+    } else if (Array.isArray(msg.content)) {
+      text = extractTextContent(msg.content as { type: string; text?: string }[]);
+    }
+
+    const firstLine = text.split("\n")[0]?.trim() ?? "";
+    if (firstLine) return firstLine.slice(0, 30);
+  }
+
+  return "Shared session";
 }
 
 function truncateOutput(output: string): string {
@@ -303,67 +278,9 @@ export default function (pi: ExtensionAPI) {
         .filter((entry) => entry.type === "message")
         .map((entry) => entry.message);
 
-      // Generate a title using the current model
-      let title = "Shared session";
-      const model = ctx.model;
-
-      if (model) {
-        const apiKey = await ctx.modelRegistry.getApiKey(model);
-
-        if (apiKey) {
-          ctx.ui.notify("Generating title…", "info");
-
-          const conversationPreview = messages
-            .filter((m) => m.role === "user" || m.role === "assistant")
-            .flatMap((m) => {
-              if (typeof m.content === "string") return [m.content];
-              if (Array.isArray(m.content)) {
-                return m.content
-                  .filter((c): c is { type: "text"; text: string } => c.type === "text")
-                  .map((c) => c.text);
-              }
-              return [];
-            })
-            .join("\n")
-            .slice(0, 4000);
-
-          try {
-            const response = await complete(
-              model,
-              {
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      {
-                        type: "text",
-                        text: [
-                          "Generate a short, descriptive title (max 6 words) for this conversation.",
-                          "Return ONLY the title text, nothing else.",
-                          "",
-                          "<conversation>",
-                          conversationPreview,
-                          "</conversation>",
-                        ].join("\n"),
-                      },
-                    ],
-                    timestamp: Date.now(),
-                  },
-                ],
-              },
-              { apiKey },
-            );
-
-            title = response.content
-              .filter((c): c is { type: "text"; text: string } => c.type === "text")
-              .map((c) => c.text)
-              .join("")
-              .trim();
-          } catch {
-            ctx.ui.notify("Could not generate title, continuing without one.", "warning");
-          }
-        }
-      }
+      const title = titleFromFirstUserLine(
+        messages as unknown as { role?: unknown; content?: unknown }[],
+      );
 
       const payload = buildPublishedSession(
         header!,
@@ -372,12 +289,14 @@ export default function (pi: ExtensionAPI) {
       );
 
       const slug = header!.id.slice(0, 8);
-      const filename = `${slug}.json`;
+
+      ctx.ui.notify("Rendering HTML…", "info");
+      const html = await renderSession(payload);
 
       await mkdir(outDir, { recursive: true });
-      await writeFile(join(outDir, filename), JSON.stringify(payload, null, 2), "utf8");
+      await writeFile(join(outDir, `${slug}.html`), html, "utf8");
 
-      ctx.ui.notify(`Wrote ${filename}`, "info");
+      ctx.ui.notify(`Published → out/${slug}.html`, "info");
     },
   });
 }

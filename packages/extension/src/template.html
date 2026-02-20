@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{TITLE}}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #111111;
+    --surface: #1f1f21;
+    --surface-soft: #141415;
+    --border: #39393c;
+    --text: #fbfbfb;
+    --sub: #adadb1;
+    --dim: #84848a;
+    --blue: #009fff;
+    --green: #00cab1;
+    --red: #ff2e3f;
+    --orange: #ffca00;
+    --teal: #61d5c0;
+
+    --measure-page: 880px;
+    --gutter-page: 1.25rem;
+    --pad-page-top: clamp(1.5rem, 3vw, 2.5rem);
+    --pad-page-bottom: 3.5rem;
+
+    --stack-page: 1.25rem;
+    --stack-turn: 1.25rem;
+    --stack-turn-inner: 0.65rem;
+    --stack-response: 0.8rem;
+    --stack-prose: 0.55rem;
+    --stack-heading: 0.45rem;
+    --stack-rule: 0.5rem;
+    --stack-micro: 0.35rem;
+    --stack-tight: 0.1rem;
+    --stack-footer-offset: 0.25rem;
+
+    --inset-header-end: 1rem;
+    --inset-footer-start: 1rem;
+    --inset-prompt-block: 0.75rem;
+    --inset-prompt-inline: 1.1rem;
+    --inset-thinking-block: 0.5rem;
+    --inset-thinking-inline: 0.8rem;
+    --inset-tool-output-block: 0.55rem;
+    --inset-tool-output-inline: 0.8rem;
+    --inset-code-block: 0.08rem;
+    --inset-code-inline: 0.35rem;
+    --inset-table-block: 0.35rem;
+    --inset-table-inline: 0.75rem;
+
+    --indent-response: 1.5rem;
+    --indent-list: 1.25rem;
+
+    --gap-meta-row: 0.4rem;
+    --gap-meta-col: 1.25rem;
+    --gap-tool-inline: 0.45rem;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background: rgba(0, 159, 255, 0.3);
+    color: var(--text);
+  }
+
+  .page {
+    inline-size: min(100% - calc(var(--gutter-page) * 2), var(--measure-page));
+    margin-inline: auto;
+    padding-block: var(--pad-page-top) var(--pad-page-bottom);
+
+    > * + * {
+      margin-block-start: var(--stack-page);
+    }
+
+    > header {
+      padding-block-end: var(--inset-header-end);
+
+      > * + * {
+        margin-block-start: var(--stack-micro);
+      }
+
+      time {
+        display: block;
+        margin: 0;
+        color: var(--dim);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--text);
+        font-size: clamp(1.35rem, 2.6vw, 1.6rem);
+        line-height: 1.3;
+        text-wrap: balance;
+      }
+    }
+
+    > footer {
+      margin-block-start: var(--stack-footer-offset);
+      border-block-start: 1px dashed var(--border);
+      padding-block-start: var(--inset-footer-start);
+    }
+
+    > ol {
+      list-style: none;
+      margin: 0;
+      padding: var(--inset-header-end) 0 0;
+      border-block-start: 1px dashed var(--border);
+
+      > li + li {
+        margin-block-start: var(--stack-turn);
+        border-block-start: 1px dashed var(--border);
+        padding-block-start: var(--stack-turn);
+      }
+
+      > li > article {
+        > * + * {
+          margin-block-start: var(--stack-turn-inner);
+        }
+      }
+    }
+  }
+
+  :where(.page > footer, .response > footer) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--gap-meta-row) var(--gap-meta-col);
+    color: var(--dim);
+    font-size: 0.72rem;
+  }
+
+  .prompt {
+    margin: 0;
+    border-inline-start: 3px solid var(--blue);
+    background: var(--surface);
+    padding: var(--inset-prompt-block) var(--inset-prompt-inline);
+
+    p {
+      margin: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      color: var(--text);
+      white-space: pre-wrap;
+      text-wrap: pretty;
+      line-height: 1.7;
+
+      &::before {
+        content: "❯";
+        color: var(--blue);
+        font-weight: 700;
+        flex: none;
+        inline-size: 1.6ch;
+        margin-inline-start: -1ch;
+        margin-inline-end: 1ch;
+        text-align: center;
+      }
+    }
+  }
+
+  .response {
+    padding-inline-start: var(--indent-response);
+
+    > * + * {
+      margin-block-start: var(--stack-response);
+    }
+  }
+
+  .thinking {
+    margin: 0;
+    border-inline-start: 2px solid var(--border);
+    padding: var(--inset-thinking-block) var(--inset-thinking-inline);
+    color: var(--sub);
+    font-size: 0.92em;
+    font-style: italic;
+    white-space: pre-wrap;
+
+    &::before {
+      content: "💭 ";
+    }
+  }
+
+  .tool {
+    margin: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--gap-tool-inline);
+    font-size: 0.92em;
+    min-inline-size: 0;
+
+    > span[aria-hidden="true"] {
+      inline-size: 1ch;
+      flex: none;
+      font-weight: 700;
+    }
+
+    &[data-status="ok"] > span[aria-hidden="true"] {
+      color: var(--green);
+    }
+
+    &[data-status="error"] > span[aria-hidden="true"] {
+      color: var(--red);
+    }
+
+    .tool-name {
+      color: var(--blue);
+      font-weight: 500;
+      flex: none;
+    }
+
+    code {
+      flex: 1 1 24ch;
+      min-inline-size: 0;
+      margin: 0;
+      border: none;
+      padding: 0;
+      background: none;
+      color: var(--sub);
+      font-size: inherit;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tool-toggle {
+      margin-inline-start: auto;
+      border: none;
+      padding: 0;
+      background: none;
+      color: var(--dim);
+      font: inherit;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+
+    .tool-toggle:hover {
+      color: var(--text);
+    }
+  }
+
+  .tool-output {
+    margin: 0 0 0 calc(1ch + var(--gap-tool-inline));
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    padding: var(--inset-tool-output-block) var(--inset-tool-output-inline);
+    color: var(--sub);
+    font-size: 0.84em;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    &[hidden] {
+      display: none !important;
+    }
+
+    &[data-status="error"] {
+      color: var(--red);
+      border-color: color-mix(in oklab, var(--red) 25%, var(--border));
+    }
+  }
+
+  .pierre-code,
+  .pierre-diff {
+    margin-block: var(--stack-micro);
+  }
+
+  .pierre-code > diffs-container,
+  .pierre-diff > diffs-container {
+    display: block;
+  }
+
+  .pierre-code pre,
+  .pierre-diff:empty {
+    margin: 10px 0;
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+
+  .pierre-code pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  .response > * + * {
+    margin-block-start: var(--stack-response);
+  }
+
+  .response > section {
+    color: var(--text);
+    line-height: 1.72;
+    text-wrap: pretty;
+
+    > * {
+      margin: 0;
+    }
+
+    > * + * {
+      margin-block-start: var(--stack-prose);
+    }
+
+    strong {
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    :is(p, li) code {
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: var(--teal);
+    }
+
+    :is(h1, h2, h3, h4, h5, h6) {
+      margin-block-start: var(--stack-heading);
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    h1 { font-size: 1.2em; }
+    h2 { font-size: 1.08em; }
+    h3 { font-size: 1em; }
+
+    :is(h4, h5, h6) {
+      font-size: 1em;
+      color: var(--sub);
+    }
+
+    hr {
+      margin-block: var(--stack-rule);
+      border: none;
+      border-block-start: 1px dashed var(--border);
+    }
+
+    :is(ol, ul) {
+      margin: 0;
+      padding-inline-start: var(--indent-list);
+    }
+
+    li::marker {
+      color: var(--dim);
+    }
+
+    table {
+      inline-size: 100%;
+      border-collapse: collapse;
+      font-size: 0.92em;
+    }
+
+    th {
+      border-block-end: 1px solid var(--border);
+      padding: var(--inset-table-block) var(--inset-table-inline);
+      text-align: left;
+      color: var(--sub);
+      font-size: 0.82em;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td {
+      border-block-end: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+      padding: var(--inset-table-block) var(--inset-table-inline);
+    }
+
+    :is(td, th) code {
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--teal);
+    }
+  }
+
+  .tool > .tool-name {
+    color: var(--blue);
+    font-weight: 500;
+  }
+
+  .response > section strong {
+    color: var(--orange);
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+{{CONTENT}}
+</main>
+
+<script>
+  const initToolOutputToggles = () => {
+    for (const el of document.querySelectorAll("[data-tool-toggle]")) {
+      if (!(el instanceof HTMLButtonElement)) continue;
+      const outputId = el.getAttribute("aria-controls");
+      if (!outputId) continue;
+      const output = document.getElementById(outputId);
+      if (!output) continue;
+
+      el.setAttribute("aria-expanded", "false");
+      el.textContent = "[+]";
+      output.hidden = true;
+    }
+  };
+
+  initToolOutputToggles();
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest("[data-tool-toggle]");
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    const outputId = button.getAttribute("aria-controls");
+    if (!outputId) return;
+
+    const output = document.getElementById(outputId);
+    if (!output) return;
+
+    const expanded = button.getAttribute("aria-expanded") === "true";
+    button.setAttribute("aria-expanded", expanded ? "false" : "true");
+    button.textContent = expanded ? "[+]" : "[-]";
+    output.hidden = expanded;
+  });
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "@pierre/diffs": "https://esm.sh/@pierre/diffs@1.1.0-beta.16"
+  }
+}
+</script>
+<script type="module">
+  import { File, FileDiff, resolveThemes, resolveLanguages } from "@pierre/diffs";
+
+  const THEME = { dark: "pierre-dark", light: "pierre-light" };
+  const BASE_OPTIONS = { theme: THEME, themeType: "dark", overflow: "scroll" };
+
+  const codeBlocks = Array.from(document.querySelectorAll(".pierre-code"));
+  const diffBlocks = Array.from(document.querySelectorAll(".pierre-diff"));
+
+  if (codeBlocks.length > 0 || diffBlocks.length > 0) {
+    const langs = new Set();
+    const parsedDiffs = [];
+
+    for (const el of codeBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+      const lang = el.dataset.lang;
+      if (lang && lang !== "text") langs.add(lang);
+    }
+
+    for (const el of diffBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+      const raw = el.dataset.diff;
+      if (!raw) continue;
+
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") continue;
+
+        const path = typeof data.path === "string" ? data.path : "";
+        const oldText = typeof data.oldText === "string" ? data.oldText : "";
+        const newText = typeof data.newText === "string" ? data.newText : "";
+
+        parsedDiffs.push({ el, path, oldText, newText });
+
+        const dot = path.lastIndexOf(".");
+        if (dot > -1 && dot < path.length - 1) {
+          langs.add(path.slice(dot + 1));
+        }
+      } catch (error) {
+        console.error("Failed to parse diff payload", error);
+      }
+    }
+
+    try {
+      await resolveThemes(["pierre-dark", "pierre-light"]);
+    } catch (error) {
+      console.error("Failed to load Pierre themes", error);
+    }
+
+    if (langs.size > 0) {
+      try {
+        await resolveLanguages(Array.from(langs));
+      } catch (error) {
+        console.error("Failed to load Pierre languages", error);
+      }
+    }
+
+    for (const el of codeBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+
+      const lang = el.dataset.lang || "text";
+      const text = el.querySelector("code")?.textContent ?? "";
+      const fallback = el.innerHTML;
+
+      try {
+        const file = new File({ ...BASE_OPTIONS, disableFileHeader: true });
+        const fileContainer = document.createElement("diffs-container");
+
+        el.innerHTML = "";
+        el.appendChild(fileContainer);
+
+        file.render({
+          file: { name: "code", contents: text, lang },
+          fileContainer,
+        });
+      } catch (error) {
+        el.innerHTML = fallback;
+        console.error("Failed to render code block", error);
+      }
+    }
+
+    for (const { el, path, oldText, newText } of parsedDiffs) {
+      const fallback = el.innerHTML;
+
+      try {
+        const diff = new FileDiff({
+          ...BASE_OPTIONS,
+          diffStyle: "unified",
+          hunkSeparators: "line-info-basic",
+        });
+
+        const fileContainer = document.createElement("diffs-container");
+        el.innerHTML = "";
+        el.appendChild(fileContainer);
+
+        diff.render({
+          oldFile: { name: path, contents: oldText },
+          newFile: { name: path, contents: newText },
+          fileContainer,
+        });
+      } catch (error) {
+        el.innerHTML = fallback;
+        console.error("Failed to render diff", error);
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
