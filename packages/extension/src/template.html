@@ -8,18 +8,18 @@
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
   :root {
-    --bg: #111111;
-    --surface: #1f1f21;
-    --surface-soft: #141415;
-    --border: #39393c;
-    --text: #fbfbfb;
-    --sub: #adadb1;
+    --bg: #f8f8f8;
+    --surface: #eeeeef;
+    --surface-soft: #f2f2f3;
+    --border: #dbdbdd;
+    --text: #1c1c1e;
+    --sub: #6c6c71;
     --dim: #84848a;
     --blue: #009fff;
     --green: #00cab1;
     --red: #ff2e3f;
-    --orange: #ffca00;
-    --teal: #61d5c0;
+    --orange: #9e5e00;
+    --teal: #0e7a6e;
 
     --measure-page: 880px;
     --gutter-page: 1.25rem;
@@ -64,8 +64,25 @@
     box-sizing: border-box;
   }
 
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111111;
+      --surface: #1f1f21;
+      --surface-soft: #141415;
+      --border: #39393c;
+      --text: #fbfbfb;
+      --sub: #adadb1;
+      --dim: #84848a;
+      --blue: #009fff;
+      --green: #00cab1;
+      --red: #ff2e3f;
+      --orange: #ffca00;
+      --teal: #61d5c0;
+    }
+  }
+
   html {
-    color-scheme: dark;
+    color-scheme: light dark;
   }
 
   body {
@@ -462,7 +479,8 @@
   import { File, FileDiff, resolveThemes, resolveLanguages } from "@pierre/diffs";
 
   const THEME = { dark: "pierre-dark", light: "pierre-light" };
-  const BASE_OPTIONS = { theme: THEME, themeType: "dark", overflow: "scroll" };
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const BASE_OPTIONS = { theme: THEME, themeType: prefersDark ? "dark" : "light", overflow: "scroll" };
 
   const codeBlocks = Array.from(document.querySelectorAll(".pierre-code"));
   const diffBlocks = Array.from(document.querySelectorAll(".pierre-diff"));
