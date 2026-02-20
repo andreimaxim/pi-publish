@@ -8,10 +8,13 @@ export interface PublishedSession {
   turns: Turn[];
 }
 
+export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
 export interface Turn {
   prompt: string;
   steps: Step[];
   model: string;
+  thinkingLevel?: ThinkingLevel;
   inputTokens: number;
   outputTokens: number;
   cost: number;

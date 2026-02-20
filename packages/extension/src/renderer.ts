@@ -122,8 +122,12 @@ function renderTurn(
     .map((step) => renderStep(step, md, nextId))
     .join("\n");
 
+  const modelLabel = turn.thinkingLevel
+    ? `${turn.model} (${turn.thinkingLevel})`
+    : turn.model;
+
   const meta = `<footer>
-  <span>${escapeHtml(turn.model)}</span>
+  <span>${escapeHtml(modelLabel)}</span>
   <span>${formatElapsed(turn.elapsed)} · ${formatTokens(turn.inputTokens)} in · ${formatTokens(turn.outputTokens)} out</span>
 </footer>`;
 
