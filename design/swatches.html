@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Light Mode Color Swatches — Pierre-aligned</title>
+<title>Color Palette</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
 
@@ -122,7 +122,7 @@
   .panel.light .swatch-hex   { color: #84848a; }
   .panel.light .swatch-note  { color: #84848a; }
 
-  .swatch-note .pierre { color: #009fff; font-weight: 600; }
+
 
   .divider {
     height: 1px;
@@ -329,79 +329,88 @@
   .panel.dark .p-footer  { color: #84848a; border-color: #39393c; }
   .panel.light .p-footer { color: #84848a; border-color: #dbdbdd; }
 
-  /* ── Rationale section ── */
-  .rationale {
-    max-width: 1100px;
-    margin: 48px auto 0;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-    padding: 24px 28px;
-    line-height: 1.75;
-  }
-
-  .rationale h2 {
-    font-size: 15px;
-    margin-bottom: 16px;
-  }
-
-  .rationale h3 {
-    font-size: 13px;
-    margin-top: 16px;
-    margin-bottom: 8px;
-    color: #6c6c71;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-
-  .rationale p {
-    margin-bottom: 8px;
-  }
-
-  .rationale table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    margin: 12px 0;
-  }
-
-  .rationale th {
-    text-align: left;
-    padding: 8px 12px;
-    background: #f5f5f6;
+  /* ─ Preview: comments ─ */
+  .p-comments {
     font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: #6c6c71;
-    border-bottom: 1px solid #dbdbdd;
+    margin-top: 6px;
+    margin-left: 18px;
   }
 
-  .rationale td {
-    padding: 6px 12px;
-    border-bottom: 1px solid #eee;
-    vertical-align: top;
+  .panel.dark .p-comments  { color: #84848a; }
+  .panel.light .p-comments { color: #84848a; }
+
+  .p-thread {
+    margin-top: 4px;
+    margin-left: 18px;
+    border-left: 2px solid;
+    padding-left: 8px;
+    font-size: 10px;
   }
 
-  .rationale .color-pip {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
+  .panel.dark .p-thread  { border-color: #c084fc; }
+  .panel.light .p-thread { border-color: #7c3aed; }
+
+  .p-note {
+    padding: 3px 0;
+    line-height: 1.5;
+  }
+
+  .p-note + .p-note {
+    border-top: 1px dashed;
+  }
+
+  .panel.dark .p-note + .p-note  { border-color: rgba(57,57,60,0.6); }
+  .panel.light .p-note + .p-note { border-color: rgba(219,219,221,0.6); }
+
+  .p-note-author {
+    padding: 3px 5px;
     border-radius: 2px;
-    vertical-align: middle;
-    margin-right: 6px;
-    border: 1px solid rgba(0,0,0,0.1);
   }
 
-  .rationale .same   { color: #008573; font-weight: 600; font-size: 10px; }
-  .rationale .adjust  { color: #9e5e00; font-weight: 600; font-size: 10px; }
-  .rationale .from-pierre { color: #009fff; font-weight: 600; font-size: 10px; }
+  .panel.dark .p-note-author  { background: rgba(192,132,252,0.08); }
+  .panel.light .p-note-author { background: rgba(124,58,237,0.06); }
+
+  .p-who {
+    font-weight: 500;
+  }
+
+  .panel.dark .p-who  { color: #c084fc; }
+  .panel.light .p-who { color: #7c3aed; }
+
+  .p-note-author .p-who {
+    color: inherit;
+  }
+
+  .panel.dark .p-note-author .p-who  { color: #fbfbfb; }
+  .panel.light .p-note-author .p-who { color: #1c1c1e; }
+
+  .p-when {
+    font-size: 10px;
+  }
+
+  .panel.dark .p-when  { color: #84848a; }
+  .panel.light .p-when { color: #84848a; }
+
+  .p-body {
+    margin-top: 1px;
+  }
+
+  .panel.dark .p-body  { color: #adadb1; }
+  .panel.light .p-body { color: #6c6c71; }
+
+  .p-mention {
+    font-weight: 500;
+  }
+
+  .panel.dark .p-mention  { color: #c084fc; }
+  .panel.light .p-mention { color: #7c3aed; }
+
 </style>
 </head>
 <body>
 
-<h1>Light Mode Palette — Pierre-aligned</h1>
+<h1>Color Palette</h1>
 <p class="subtitle">
-  Surfaces and grays drawn from Pierre's <code>pierre-light</code> theme.
   Accents kept identical where contrast allows; darkened only for
   <code>&lt;strong&gt;</code> and <code>&lt;code&gt;</code> prose readability.
 </p>
@@ -490,6 +499,12 @@
         <span class="swatch-hex">#61d5c0</span>
         <span class="swatch-note">inline &lt;code&gt;</span>
       </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#c084fc"></div>
+        <span class="swatch-label">--purple</span>
+        <span class="swatch-hex">#c084fc</span>
+        <span class="swatch-note">comments, @mentions, thread border</span>
+      </div>
     </div>
 
     <!-- Preview -->
@@ -541,8 +556,20 @@
         </ol>
       </div>
 
+      <div class="p-comments">💬 2 comments</div>
+      <div class="p-thread">
+        <div class="p-note">
+          <div><span class="p-who">@rpatel</span> <span class="p-when">· 10m</span></div>
+          <div class="p-body">Should <code>descendants</code> use BFS or DFS? <span class="p-mention">@andreimaxim</span></div>
+        </div>
+        <div class="p-note p-note-author">
+          <div><span class="p-who">@andreimaxim</span> <span class="p-when">· 5m</span></div>
+          <div class="p-body">It's DFS — works fine since our branches are linear.</div>
+        </div>
+      </div>
+
       <div class="p-meta">
-        <span>claude-opus-4-6</span>
+        <span>claude-opus-4-6 (high)</span>
         <span>7.4s · 10.1k in · 380 out</span>
       </div>
 
@@ -561,25 +588,25 @@
         <div class="chip" style="background:#f8f8f8"></div>
         <span class="swatch-label">--bg</span>
         <span class="swatch-hex">#f8f8f8</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.background</span>
+        <span class="swatch-note">page background</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#eeeeef"></div>
         <span class="swatch-label">--surface</span>
         <span class="swatch-hex">#eeeeef</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.border</span>
+        <span class="swatch-note">prompt bg, inline code bg</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#f2f2f3"></div>
         <span class="swatch-label">--surface-soft</span>
         <span class="swatch-hex">#f2f2f3</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> input.background</span>
+        <span class="swatch-note">tool output bg</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#dbdbdd"></div>
         <span class="swatch-label">--border</span>
         <span class="swatch-hex">#dbdbdd</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> input.border</span>
+        <span class="swatch-note">separators, dashed rules</span>
       </div>
 
       <div class="divider"></div>
@@ -588,19 +615,19 @@
         <div class="chip" style="background:#1c1c1e"></div>
         <span class="swatch-label">--text</span>
         <span class="swatch-hex">#1c1c1e</span>
-        <span class="swatch-note">near Pierre #070707, softer</span>
+        <span class="swatch-note">primary body text</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#6c6c71"></div>
         <span class="swatch-label">--sub</span>
         <span class="swatch-hex">#6c6c71</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> sideBar.foreground</span>
+        <span class="swatch-note">thinking, tool args, output</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#84848a"></div>
         <span class="swatch-label">--dim</span>
         <span class="swatch-hex">#84848a</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> comments, shared both themes</span>
+        <span class="swatch-note">meta, footer, list markers</span>
       </div>
 
       <div class="divider"></div>
@@ -609,19 +636,19 @@
         <div class="chip" style="background:#009fff"></div>
         <span class="swatch-label">--blue</span>
         <span class="swatch-hex">#009fff</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+        <span class="swatch-note">prompt accent, tool names</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#00cab1"></div>
         <span class="swatch-label">--green</span>
         <span class="swatch-hex">#00cab1</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+        <span class="swatch-note">success ✓</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#ff2e3f"></div>
         <span class="swatch-label">--red</span>
         <span class="swatch-hex">#ff2e3f</span>
-        <span class="swatch-note"><span class="pierre">Pierre</span> same both themes</span>
+        <span class="swatch-note">error ✗, error output</span>
       </div>
       <div class="swatch-row">
         <div class="chip" style="background:#9e5e00"></div>
@@ -634,6 +661,12 @@
         <span class="swatch-label">--teal</span>
         <span class="swatch-hex">#0e7a6e</span>
         <span class="swatch-note">darkened — #61d5c0 is 2.1:1 on white</span>
+      </div>
+      <div class="swatch-row">
+        <div class="chip" style="background:#7c3aed"></div>
+        <span class="swatch-label">--purple</span>
+        <span class="swatch-hex">#7c3aed</span>
+        <span class="swatch-note">darkened — #c084fc is 2.3:1 on white</span>
       </div>
     </div>
 
@@ -686,8 +719,20 @@
         </ol>
       </div>
 
+      <div class="p-comments">💬 2 comments</div>
+      <div class="p-thread">
+        <div class="p-note">
+          <div><span class="p-who">@rpatel</span> <span class="p-when">· 10m</span></div>
+          <div class="p-body">Should <code>descendants</code> use BFS or DFS? <span class="p-mention">@andreimaxim</span></div>
+        </div>
+        <div class="p-note p-note-author">
+          <div><span class="p-who">@andreimaxim</span> <span class="p-when">· 5m</span></div>
+          <div class="p-body">It's DFS — works fine since our branches are linear.</div>
+        </div>
+      </div>
+
       <div class="p-meta">
-        <span>claude-opus-4-6</span>
+        <span>claude-opus-4-6 (high)</span>
         <span>7.4s · 10.1k in · 380 out</span>
       </div>
 
@@ -699,124 +744,7 @@
   </div>
 </div>
 
-<!-- ── Rationale ── -->
-<div class="rationale">
-  <h2>Rationale: alignment with Pierre's <code>pierre-light</code></h2>
 
-  <h3>Surfaces — all from Pierre</h3>
-  <table>
-    <thead>
-      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Pierre source</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>--bg</td>
-        <td><span class="color-pip" style="background:#111111"></span>#111111</td>
-        <td><span class="color-pip" style="background:#f8f8f8"></span>#f8f8f8</td>
-        <td class="from-pierre">sideBar.background</td>
-      </tr>
-      <tr>
-        <td>--surface</td>
-        <td><span class="color-pip" style="background:#1f1f21"></span>#1f1f21</td>
-        <td><span class="color-pip" style="background:#eeeeef"></span>#eeeeef</td>
-        <td class="from-pierre">sideBar.border, indent guide bg</td>
-      </tr>
-      <tr>
-        <td>--surface-soft</td>
-        <td><span class="color-pip" style="background:#141415"></span>#141415</td>
-        <td><span class="color-pip" style="background:#f2f2f3"></span>#f2f2f3</td>
-        <td class="from-pierre">input.background</td>
-      </tr>
-      <tr>
-        <td>--border</td>
-        <td><span class="color-pip" style="background:#39393c"></span>#39393c</td>
-        <td><span class="color-pip" style="background:#dbdbdd"></span>#dbdbdd</td>
-        <td class="from-pierre">input.border, active indent guide</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Text grays — from Pierre's foreground scale</h3>
-  <table>
-    <thead>
-      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Pierre source</th><th>Ratio on --bg</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>--text</td>
-        <td><span class="color-pip" style="background:#fbfbfb"></span>#fbfbfb</td>
-        <td><span class="color-pip" style="background:#1c1c1e"></span>#1c1c1e</td>
-        <td>Softer than Pierre's #070707</td>
-        <td>16.2:1</td>
-      </tr>
-      <tr>
-        <td>--sub</td>
-        <td><span class="color-pip" style="background:#adadb1"></span>#adadb1</td>
-        <td><span class="color-pip" style="background:#6c6c71"></span>#6c6c71</td>
-        <td class="from-pierre">sideBar.foreground</td>
-        <td>4.8:1 ✓</td>
-      </tr>
-      <tr>
-        <td>--dim</td>
-        <td><span class="color-pip" style="background:#84848a"></span>#84848a</td>
-        <td><span class="color-pip" style="background:#84848a"></span>#84848a</td>
-        <td class="same">Same both themes (Pierre too)</td>
-        <td>3.5:1 (AA Large)</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Accents — same where possible, darkened only when necessary</h3>
-  <table>
-    <thead>
-      <tr><th>Variable</th><th>Dark</th><th>Light</th><th>Change</th><th>Why</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>--blue</td>
-        <td><span class="color-pip" style="background:#009fff"></span>#009fff</td>
-        <td><span class="color-pip" style="background:#009fff"></span>#009fff</td>
-        <td class="same">SAME</td>
-        <td>3.4:1 — used for short labels (tool names, caret), same as Pierre</td>
-      </tr>
-      <tr>
-        <td>--green</td>
-        <td><span class="color-pip" style="background:#00cab1"></span>#00cab1</td>
-        <td><span class="color-pip" style="background:#00cab1"></span>#00cab1</td>
-        <td class="same">SAME</td>
-        <td>2.9:1 — single-character checkmarks ✓, same as Pierre</td>
-      </tr>
-      <tr>
-        <td>--red</td>
-        <td><span class="color-pip" style="background:#ff2e3f"></span>#ff2e3f</td>
-        <td><span class="color-pip" style="background:#ff2e3f"></span>#ff2e3f</td>
-        <td class="same">SAME</td>
-        <td>4.0:1 — error text + marks, same as Pierre</td>
-      </tr>
-      <tr>
-        <td>--orange</td>
-        <td><span class="color-pip" style="background:#ffca00"></span>#ffca00</td>
-        <td><span class="color-pip" style="background:#9e5e00"></span>#9e5e00</td>
-        <td class="adjust">DARKENED</td>
-        <td>#ffca00 is 1.5:1 on white — invisible. Used for &lt;strong&gt; prose text</td>
-      </tr>
-      <tr>
-        <td>--teal</td>
-        <td><span class="color-pip" style="background:#61d5c0"></span>#61d5c0</td>
-        <td><span class="color-pip" style="background:#0e7a6e"></span>#0e7a6e</td>
-        <td class="adjust">DARKENED</td>
-        <td>#61d5c0 is 2.1:1 on --surface — invisible. Used for inline &lt;code&gt; text</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <p style="margin-top:16px; color:#6c6c71; font-size:12px;">
-    Pierre keeps <code>#009fff</code>, <code>#00cab1</code>, <code>#ff2e3f</code>, <code>#ffca00</code> identical across dark and light themes.
-    This works because Pierre uses them for tiny syntax tokens and line indicators.
-    Our template uses <code>--orange</code> and <code>--teal</code> for inline reading — bold phrases and code spans inside paragraphs —
-    so those two <em>must</em> be darkened to remain legible.
-  </p>
-</div>
 
 </body>
 </html>

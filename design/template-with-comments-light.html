@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building the /publish extension — Comments (Light)</title>
+<style>
+
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #f8f8f8;
+    --surface: #eeeeef;
+    --surface-soft: #f2f2f3;
+    --border: #dbdbdd;
+    --text: #1c1c1e;
+    --sub: #6c6c71;
+    --dim: #84848a;
+    --blue: #009fff;
+    --green: #00cab1;
+    --red: #ff2e3f;
+    --orange: #9e5e00;
+    --teal: #0e7a6e;
+    --purple: #7c3aed;
+
+    --measure-page: 880px;
+    --gutter-page: 1.25rem;
+    --pad-page-top: clamp(1.5rem, 3vw, 2.5rem);
+    --pad-page-bottom: 3.5rem;
+
+    --stack-page: 1.25rem;
+    --stack-turn: 1.25rem;
+    --stack-turn-inner: 0.65rem;
+    --stack-response: 0.8rem;
+    --stack-prose: 0.55rem;
+    --stack-heading: 0.45rem;
+    --stack-rule: 0.5rem;
+    --stack-micro: 0.35rem;
+    --stack-tight: 0.1rem;
+    --stack-footer-offset: 0.25rem;
+
+    --inset-header-end: 1rem;
+    --inset-footer-start: 1rem;
+    --inset-prompt-block: 0.75rem;
+    --inset-prompt-inline: 1.1rem;
+    --inset-thinking-block: 0.5rem;
+    --inset-thinking-inline: 0.8rem;
+    --inset-tool-output-block: 0.55rem;
+    --inset-tool-output-inline: 0.8rem;
+    --inset-code-block: 0.08rem;
+    --inset-code-inline: 0.35rem;
+    --inset-table-block: 0.35rem;
+    --inset-table-inline: 0.75rem;
+
+    --indent-response: 1.5rem;
+    --indent-list: 1.25rem;
+
+    --gap-meta-row: 0.4rem;
+    --gap-meta-col: 1.25rem;
+    --gap-tool-inline: 0.45rem;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background: rgba(0, 159, 255, 0.2);
+    color: var(--text);
+  }
+
+  .page {
+    inline-size: min(100% - calc(var(--gutter-page) * 2), var(--measure-page));
+    margin-inline: auto;
+    padding-block: var(--pad-page-top) var(--pad-page-bottom);
+
+    > * + * {
+      margin-block-start: var(--stack-page);
+    }
+
+    > header {
+      padding-block-end: var(--inset-header-end);
+
+      > * + * {
+        margin-block-start: var(--stack-micro);
+      }
+
+      time {
+        display: block;
+        margin: 0;
+        color: var(--dim);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--text);
+        font-size: clamp(1.35rem, 2.6vw, 1.6rem);
+        line-height: 1.3;
+        text-wrap: balance;
+      }
+    }
+
+    > footer {
+      margin-block-start: var(--stack-footer-offset);
+      border-block-start: 1px dashed var(--border);
+      padding-block-start: var(--inset-footer-start);
+    }
+
+    > ol {
+      list-style: none;
+      margin: 0;
+      padding: var(--inset-header-end) 0 0;
+      border-block-start: 1px dashed var(--border);
+
+      > li + li {
+        margin-block-start: var(--stack-turn);
+        border-block-start: 1px dashed var(--border);
+        padding-block-start: var(--stack-turn);
+      }
+
+      > li > article {
+        > * + * {
+          margin-block-start: var(--stack-turn-inner);
+        }
+      }
+    }
+  }
+
+  :where(.page > footer, .response > footer) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--gap-meta-row) var(--gap-meta-col);
+    color: var(--dim);
+    font-size: 0.72rem;
+  }
+
+  .prompt {
+    margin: 0;
+    border-inline-start: 3px solid var(--blue);
+    background: var(--surface);
+    padding: var(--inset-prompt-block) var(--inset-prompt-inline);
+
+    p {
+      margin: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      color: var(--text);
+      white-space: pre-wrap;
+      text-wrap: pretty;
+      line-height: 1.7;
+
+      &::before {
+        content: "❯";
+        color: var(--blue);
+        font-weight: 700;
+        flex: none;
+        inline-size: 1.6ch;
+        margin-inline-start: -1ch;
+        margin-inline-end: 1ch;
+        text-align: center;
+      }
+    }
+  }
+
+  .response {
+    padding-inline-start: var(--indent-response);
+
+    > * + * {
+      margin-block-start: var(--stack-response);
+    }
+  }
+
+  .thinking {
+    margin: 0;
+    border-inline-start: 2px solid var(--border);
+    padding: var(--inset-thinking-block) var(--inset-thinking-inline);
+    color: var(--sub);
+    font-size: 0.92em;
+    font-style: italic;
+    white-space: pre-wrap;
+
+    &::before {
+      content: "💭 ";
+    }
+  }
+
+  .tool {
+    margin: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--gap-tool-inline);
+    font-size: 0.92em;
+    min-inline-size: 0;
+
+    > span[aria-hidden="true"] {
+      inline-size: 1ch;
+      flex: none;
+      font-weight: 700;
+    }
+
+    &[data-status="ok"] > span[aria-hidden="true"] {
+      color: var(--green);
+    }
+
+    &[data-status="error"] > span[aria-hidden="true"] {
+      color: var(--red);
+    }
+
+    .tool-name {
+      color: var(--blue);
+      font-weight: 500;
+      flex: none;
+    }
+
+    code {
+      flex: 1 1 24ch;
+      min-inline-size: 0;
+      margin: 0;
+      border: none;
+      padding: 0;
+      background: none;
+      color: var(--sub);
+      font-size: inherit;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tool-toggle {
+      margin-inline-start: auto;
+      border: none;
+      padding: 0;
+      background: none;
+      color: var(--dim);
+      font: inherit;
+      font-size: 0.9em;
+      cursor: pointer;
+    }
+
+    .tool-toggle:hover {
+      color: var(--text);
+    }
+  }
+
+  .tool-output {
+    margin: 0 0 0 calc(1ch + var(--gap-tool-inline));
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    padding: var(--inset-tool-output-block) var(--inset-tool-output-inline);
+    color: var(--sub);
+    font-size: 0.84em;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    &[hidden] {
+      display: none !important;
+    }
+
+    &[data-status="error"] {
+      color: var(--red);
+      border-color: color-mix(in oklab, var(--red) 25%, var(--border));
+    }
+  }
+
+  .pierre-code,
+  .pierre-diff {
+    margin-block: var(--stack-micro);
+  }
+
+  .pierre-code > diffs-container,
+  .pierre-diff > diffs-container {
+    display: block;
+  }
+
+  .pierre-code pre,
+  .pierre-diff:empty {
+    margin: 10px 0;
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+
+  .pierre-code pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  .response > * + * {
+    margin-block-start: var(--stack-response);
+  }
+
+  .response > section {
+    color: var(--text);
+    line-height: 1.72;
+    text-wrap: pretty;
+
+    > * {
+      margin: 0;
+    }
+
+    > * + * {
+      margin-block-start: var(--stack-prose);
+    }
+
+    strong {
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    :is(p, li) code {
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 12px;
+      color: var(--teal);
+    }
+
+    :is(h1, h2, h3, h4, h5, h6) {
+      margin-block-start: var(--stack-heading);
+      font-weight: 600;
+      line-height: 1.35;
+    }
+
+    h1 { font-size: 1.2em; }
+    h2 { font-size: 1.08em; }
+    h3 { font-size: 1em; }
+
+    :is(h4, h5, h6) {
+      font-size: 1em;
+      color: var(--sub);
+    }
+
+    hr {
+      margin-block: var(--stack-rule);
+      border: none;
+      border-block-start: 1px dashed var(--border);
+    }
+
+    :is(ol, ul) {
+      margin: 0;
+      padding-inline-start: var(--indent-list);
+    }
+
+    li::marker {
+      color: var(--dim);
+    }
+
+    table {
+      inline-size: 100%;
+      border-collapse: collapse;
+      font-size: 0.92em;
+    }
+
+    th {
+      border-block-end: 1px solid var(--border);
+      padding: var(--inset-table-block) var(--inset-table-inline);
+      text-align: left;
+      color: var(--sub);
+      font-size: 0.82em;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    td {
+      border-block-end: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+      padding: var(--inset-table-block) var(--inset-table-inline);
+    }
+
+    :is(td, th) code {
+      background: var(--surface);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      color: var(--teal);
+    }
+  }
+
+  /* ── Comments ── */
+
+  .comment-toggle {
+    border: none;
+    padding: 0;
+    background: none;
+    color: var(--dim);
+    font: inherit;
+    font-size: 0.84em;
+    cursor: pointer;
+  }
+
+  .comment-toggle:hover {
+    color: var(--sub);
+  }
+
+  .comment-toggle[aria-expanded="true"]::after {
+    content: " [−]";
+  }
+
+  .comment-toggle[aria-expanded="false"]::after {
+    content: " [+]";
+  }
+
+  .comment-toggle-standalone {
+    display: block;
+    margin-block-start: 0.35rem;
+    margin-inline-start: calc(var(--measure-page) / 2 - var(--indent-response));
+  }
+
+  .comment-thread {
+    margin-block-start: 0.35rem;
+    margin-inline-start: calc(var(--measure-page) / 2 - var(--indent-response));
+    border-inline-start: 2px solid var(--purple);
+    padding-inline-start: 0.5rem;
+    font-size: 0.84em;
+  }
+
+  .comment-thread[hidden] {
+    display: none;
+  }
+
+  .comment-thread .note {
+    padding-block: 0.2rem;
+    padding-inline-start: 0.4rem;
+    line-height: 1.55;
+  }
+
+  .comment-thread .note + .note {
+    border-block-start: 1px dashed color-mix(in oklab, var(--border) 60%, transparent);
+    margin-block-start: 0.1rem;
+    padding-block-start: 0.15rem;
+  }
+
+  .note-head {
+    color: var(--dim);
+  }
+
+  .note-head .who {
+    color: var(--purple);
+    font-weight: 500;
+  }
+
+  .note-body {
+    color: var(--sub);
+  }
+
+  .note-body code {
+    background: var(--surface);
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--teal);
+  }
+
+
+  .note-body .mention {
+    color: var(--purple);
+    font-weight: 500;
+  }
+
+  .note.note-author {
+    background: color-mix(in oklab, var(--purple) 6%, transparent);
+  }
+
+  .note.note-author .who {
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<main class="page">
+<header>
+  <time datetime="2026-02-19T14:53:51.225Z">Feb 19, 2026</time>
+  <h1>Building the /publish extension</h1>
+</header>
+<ol>
+  <!-- ═══════ TURN 1 ═══════ -->
+  <li>
+<article>
+
+<!-- ── Prompt with 2 comments ── -->
+<section class="prompt">
+  <p>Extract the tree walking into its own module so we can test it independently.</p>
+</section>
+
+<section class="response">
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 2 comments</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@jmorrow</span> · 2h</div>
+    <div class="note-body">Good call isolating this early — the walker had way too much coupling to the parser. Makes snapshot testing much easier.</div>
+  </div>
+  <div class="note note-author">
+    <div class="note-head"><span class="who">@andreimaxim</span> · 1h</div>
+    <div class="note-body">Thanks! It was long overdue — I kept tripping over it during debugging.</div>
+  </div>
+</div>
+
+
+<aside class="thinking"><strong>Analyzing the current coupling between parser and tree traversal</strong></aside>
+
+<!-- ── Tool call with 2 comments ── -->
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">read</span>
+  <code>lib/session_parser.rb</code>
+</div>
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 2 comments</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@alopez</span> · 1h</div>
+    <div class="note-body">This file is 450 lines — did the agent read the whole thing or just the relevant section?</div>
+  </div>
+  <div class="note note-author">
+    <div class="note-head"><span class="who">@andreimaxim</span> · 45m</div>
+    <div class="note-body">Full read. It needed the whole picture to know what to extract — you can see the token count in the footer.</div>
+  </div>
+</div>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">read</span>
+  <code>spec/session_parser_spec.rb</code>
+</div>
+
+<!-- ── Failing tool + error output with 3 comments ── -->
+<div class="tool" data-status="error">
+  <span aria-hidden="true">✗</span>
+  <span class="tool-name">bash</span>
+  <code>ruby -c lib/tree_walker.rb</code>
+  <button type="button" class="tool-toggle" data-tool-toggle aria-expanded="true" aria-controls="block-err-0">[−]</button>
+</div>
+<pre id="block-err-0" class="tool-output" data-status="error">lib/tree_walker.rb:47: syntax error, unexpected end-of-input, expecting `end'
+  ...from SessionNode ancestors traversal
+                                         ^</pre>
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 3 comments</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@rpatel</span> · 30m</div>
+    <div class="note-body">Classic off-by-one with Ruby <code>end</code> keywords. At least it caught it before running the full suite.</div>
+  </div>
+  <div class="note">
+    <div class="note-head"><span class="who">@mnguyen</span> · 25m</div>
+    <div class="note-body">Nice that the agent immediately retried after fixing the syntax. No human prodding needed.</div>
+  </div>
+  <div class="note note-author">
+    <div class="note-head"><span class="who">@andreimaxim</span> · 20m</div>
+    <div class="note-body"><span class="mention">@mnguyen</span> yeah, the error → fix → retry loop is the best part. I just sit back and watch it sort itself out.</div>
+  </div>
+</div>
+
+<aside class="thinking"><strong>Fixed missing `end` keyword, retrying syntax check</strong></aside>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">write</span>
+  <code>lib/tree_walker.rb</code>
+</div>
+
+<!-- ── Edit tool call with 1 comment ── -->
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">edit</span>
+  <code>lib/session_parser.rb</code>
+</div>
+<div class="pierre-diff" data-diff="{&quot;path&quot;:&quot;lib/session_parser.rb&quot;,&quot;oldText&quot;:&quot;class SessionParser\n  def branch(node)\n    result = []\n    current = node\n    while current\n      result.unshift(current)\n      current = current.parent\n    end\n    result\n  end\n\n  def ancestors(node)\n    branch(node)[0..-2]\n  end\n\n  def descendants(node)\n    children = node.children.dup\n    result = []\n    while (child = children.shift)\n      result &lt;&lt; child\n      children.concat(child.children)\n    end\n    result\n  end\n&quot;,&quot;newText&quot;:&quot;class SessionParser\n  include TreeWalker\n\n&quot;}"></div>
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 1 comment</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@skhan</span> · 15m</div>
+    <div class="note-body">The edit just swaps <code>include TreeWalker</code> in — clean. Would've been nice to see the diff rendered inline though.</div>
+  </div>
+</div>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">edit</span>
+  <code>spec/session_parser_spec.rb</code>
+</div>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">bash</span>
+  <code>bundle exec rspec spec/</code>
+  <button type="button" class="tool-toggle" data-tool-toggle aria-expanded="true" aria-controls="block-ok-0">[−]</button>
+</div>
+<pre id="block-ok-0" class="tool-output" data-status="ok">Finished in 0.38 seconds (files took 1.12 seconds to load)
+14 examples, 0 failures</pre>
+
+<!-- ── LLM response text with 2 comments ── -->
+<section><p>Extracted <code>TreeWalker</code> into its own module. The <strong>tree-walking logic</strong> is now stateless and testable on its own.</p>
+<ol>
+<li>Created <code>lib/tree_walker.rb</code> with <code>branch</code>, <code>ancestors</code>, and <code>descendants</code> methods</li>
+<li>Updated <code>SessionParser</code> to <code>include TreeWalker</code> instead of defining traversal inline</li>
+<li>Added 6 new specs for the walker, all passing alongside the original 8</li>
+</ol>
+</section>
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 2 comments</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@rpatel</span> · 10m</div>
+    <div class="note-body">Should <code>descendants</code> use BFS or DFS? I'd expect BFS for session branches but the agent doesn't say.</div>
+  </div>
+  <div class="note note-author">
+    <div class="note-head"><span class="who">@andreimaxim</span> · 5m</div>
+    <div class="note-body">It's DFS — check the write step above. Works fine since our branches are linear anyway.</div>
+  </div>
+</div>
+
+<footer>
+  <span>claude-opus-4-6 (high)</span>
+  <span>12.4s · 14.2k in · 1.1k out · $0.34</span>
+</footer>
+</section>
+</article>
+  </li>
+
+  <!-- ═══════ TURN 2 ═══════ -->
+  <li>
+<article>
+<section class="prompt">
+  <p>Now add a `leaf_to_root` iterator that yields nodes from the current leaf back up to the root.</p>
+</section>
+
+<section class="response">
+<aside class="thinking"><strong>Adding reverse traversal method</strong></aside>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">read</span>
+  <code>lib/tree_walker.rb</code>
+</div>
+
+<!-- ── Edit with 3 comments ── -->
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">edit</span>
+  <code>lib/tree_walker.rb</code>
+</div>
+<div class="pierre-diff" data-diff="{&quot;path&quot;:&quot;lib/tree_walker.rb&quot;,&quot;oldText&quot;:&quot;module TreeWalker\n  def branch(node)\n    result = []\n    current = node\n    while current\n      result.unshift(current)\n      current = current.parent\n    end\n    result\n  end\n\n  def ancestors(node)\n    branch(node)[0..-2]\n  end\n\n  def descendants(node)\n    children = node.children.dup\n    result = []\n    while (child = children.shift)\n      result &lt;&lt; child\n      children.concat(child.children)\n    end\n    result\n  end\nend\n&quot;,&quot;newText&quot;:&quot;module TreeWalker\n  def branch(node)\n    result = []\n    current = node\n    while current\n      result.unshift(current)\n      current = current.parent\n    end\n    result\n  end\n\n  def ancestors(node)\n    branch(node)[0..-2]\n  end\n\n  def descendants(node)\n    children = node.children.dup\n    result = []\n    while (child = children.shift)\n      result &lt;&lt; child\n      children.concat(child.children)\n    end\n    result\n  end\n\n  def leaf_to_root(node)\n    return enum_for(:leaf_to_root, node) unless block_given?\n\n    current = node\n    while current\n      yield current\n      current = current.parent\n    end\n  end\nend\n&quot;}"></div>
+<button class="comment-toggle comment-toggle-standalone" type="button" aria-expanded="false">&#x1f4ac; 3 comments</button>
+<div class="comment-thread" hidden>
+  <div class="note">
+    <div class="note-head"><span class="who">@tdewitt</span> · 8m</div>
+    <div class="note-body">This is the pattern pi uses internally for <code>getBranch()</code>. Nice that the agent converged on the same approach.</div>
+  </div>
+  <div class="note">
+    <div class="note-head"><span class="who">@jmorrow</span> · 6m</div>
+    <div class="note-body">Should we guard against cycles? The tree is always a DAG but a corrupted session file could cause an infinite loop.</div>
+  </div>
+  <div class="note note-author">
+    <div class="note-head"><span class="who">@andreimaxim</span> · 3m</div>
+    <div class="note-body"><span class="mention">@jmorrow</span> overkill for now — the session format guarantees monotonic IDs. We can always add a guard later if corruption becomes a real issue.</div>
+  </div>
+</div>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">write</span>
+  <code>spec/tree_walker_spec.rb</code>
+</div>
+
+<div class="tool" data-status="ok">
+  <span aria-hidden="true">✓</span>
+  <span class="tool-name">bash</span>
+  <code>bundle exec rspec spec/tree_walker_spec.rb</code>
+  <button type="button" class="tool-toggle" data-tool-toggle aria-expanded="true" aria-controls="block-ok-1">[−]</button>
+</div>
+<pre id="block-ok-1" class="tool-output" data-status="ok">Finished in 0.22 seconds (files took 1.08 seconds to load)
+9 examples, 0 failures</pre>
+
+<section><p>Added <code>leaf_to_root</code> to <code>TreeWalker</code>. It yields each node from the given leaf up through its parent chain to root.</p>
+<ul>
+<li>Uses a simple <code>while node</code> loop following <code>parent</code> pointers</li>
+<li>Returns an <code>Enumerator</code> when called without a block</li>
+<li>3 new specs covering single-node, linear chain, and branching tree scenarios</li>
+</ul>
+</section>
+
+<footer>
+  <span>claude-opus-4-6 (high)</span>
+  <span>8.1s · 11.6k in · 680 out · $0.22</span>
+</footer>
+</section>
+</article>
+  </li>
+</ol>
+<footer>
+  <span>pi session · 7a728ce4</span>
+  <span>$0.56 total</span>
+</footer>
+</main>
+
+<script>
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    // tool output toggles
+    const toolBtn = target.closest("[data-tool-toggle]");
+    if (toolBtn instanceof HTMLButtonElement) {
+      const outputId = toolBtn.getAttribute("aria-controls");
+      if (!outputId) return;
+      const output = document.getElementById(outputId);
+      if (!output) return;
+      const expanded = toolBtn.getAttribute("aria-expanded") === "true";
+      toolBtn.setAttribute("aria-expanded", expanded ? "false" : "true");
+      toolBtn.textContent = expanded ? "[+]" : "[−]";
+      output.hidden = expanded;
+      return;
+    }
+
+    // comment toggles
+    const commentBtn = target.closest(".comment-toggle");
+    if (commentBtn instanceof HTMLButtonElement) {
+      const thread = commentBtn.nextElementSibling;
+      if (!thread || !thread.classList.contains("comment-thread")) return;
+      const expanded = commentBtn.getAttribute("aria-expanded") === "true";
+      commentBtn.setAttribute("aria-expanded", expanded ? "false" : "true");
+      thread.hidden = expanded;
+    }
+  });
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "@pierre/diffs": "https://esm.sh/@pierre/diffs@1.1.0-beta.16"
+  }
+}
+</script>
+<script type="module">
+  import { File, FileDiff, resolveThemes, resolveLanguages } from "@pierre/diffs";
+
+  const THEME = { dark: "pierre-dark", light: "pierre-light" };
+  const BASE_OPTIONS = { theme: THEME, themeType: "light", overflow: "scroll" };
+
+  const codeBlocks = Array.from(document.querySelectorAll(".pierre-code"));
+  const diffBlocks = Array.from(document.querySelectorAll(".pierre-diff"));
+
+  if (codeBlocks.length > 0 || diffBlocks.length > 0) {
+    const langs = new Set();
+    const parsedDiffs = [];
+
+    for (const el of codeBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+      const lang = el.dataset.lang;
+      if (lang && lang !== "text") langs.add(lang);
+    }
+
+    for (const el of diffBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+      const raw = el.dataset.diff;
+      if (!raw) continue;
+
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== "object") continue;
+
+        const path = typeof data.path === "string" ? data.path : "";
+        const oldText = typeof data.oldText === "string" ? data.oldText : "";
+        const newText = typeof data.newText === "string" ? data.newText : "";
+
+        parsedDiffs.push({ el, path, oldText, newText });
+
+        const dot = path.lastIndexOf(".");
+        if (dot > -1 && dot < path.length - 1) {
+          langs.add(path.slice(dot + 1));
+        }
+      } catch (error) {
+        console.error("Failed to parse diff payload", error);
+      }
+    }
+
+    try {
+      await resolveThemes(["pierre-dark", "pierre-light"]);
+    } catch (error) {
+      console.error("Failed to load Pierre themes", error);
+    }
+
+    if (langs.size > 0) {
+      try {
+        await resolveLanguages(Array.from(langs));
+      } catch (error) {
+        console.error("Failed to load Pierre languages", error);
+      }
+    }
+
+    for (const el of codeBlocks) {
+      if (!(el instanceof HTMLElement)) continue;
+
+      const lang = el.dataset.lang || "text";
+      const text = el.querySelector("code")?.textContent ?? "";
+      const fallback = el.innerHTML;
+
+      try {
+        const file = new File({ ...BASE_OPTIONS, disableFileHeader: true });
+        const fileContainer = document.createElement("diffs-container");
+
+        el.innerHTML = "";
+        el.appendChild(fileContainer);
+
+        file.render({
+          file: { name: "code", contents: text, lang },
+          fileContainer,
+        });
+      } catch (error) {
+        el.innerHTML = fallback;
+        console.error("Failed to render code block", error);
+      }
+    }
+
+    for (const { el, path, oldText, newText } of parsedDiffs) {
+      const fallback = el.innerHTML;
+
+      try {
+        const diff = new FileDiff({
+          ...BASE_OPTIONS,
+          diffStyle: "unified",
+          hunkSeparators: "line-info-basic",
+        });
+
+        const fileContainer = document.createElement("diffs-container");
+        el.innerHTML = "";
+        el.appendChild(fileContainer);
+
+        diff.render({
+          oldFile: { name: path, contents: oldText },
+          newFile: { name: path, contents: newText },
+          fileContainer,
+        });
+      } catch (error) {
+        el.innerHTML = fallback;
+        console.error("Failed to render diff", error);
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
