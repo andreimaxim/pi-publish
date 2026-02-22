@@ -1,47 +1,50 @@
-export interface PublishedSession {
-  session: {
-    id: string;
-    title: string;
-    date: string;
-    totalCost: number;
-  };
+export interface Trace {
+  id: string;
+  title: string;
+  date: string;
+  totalCost: number;
   turns: Turn[];
 }
 
-export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-
 export interface Turn {
   prompt: string;
+  completion: Completion;
+  metadata: Metadata;
+}
+
+export interface Completion {
   steps: Step[];
+  response: string;
+}
+
+export type Step = Narration | Action;
+
+export interface Narration {
+  type: "narration";
+  text: string;
+}
+
+export interface Action {
+  type: "action";
+  name: string;
+  args: Record<string, unknown>;
+  ok: boolean;
+  output?: string;
+}
+
+export type ThinkingLevel =
+  | "off"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+
+export interface Metadata {
   model: string;
   thinkingLevel?: ThinkingLevel;
   inputTokens: number;
   outputTokens: number;
   cost: number;
   elapsed: number;
-}
-
-export type Step = ThinkingStep | TextStep | ToolStep;
-
-export interface ThinkingStep {
-  type: "thinking";
-  text: string;
-}
-
-export interface TextStep {
-  type: "text";
-  text: string;
-}
-
-export interface ToolStep {
-  type: "tool";
-  name: string;
-  args: string;
-  ok: boolean;
-  output?: string;
-  diff?: {
-    path: string;
-    oldText: string;
-    newText: string;
-  };
 }

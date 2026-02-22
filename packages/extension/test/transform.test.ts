@@ -1,19 +1,13 @@
-import { describe, it } from "node:test";
+import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  buildPublishedSession,
-  titleFromFirstUserLine,
-  shortenPath,
-  summarizeToolArgs,
-  extractTextContent,
-  truncateOutput,
-} from "../src/transform.ts";
-import type { BranchEntry } from "../src/transform.ts";
+import type { SessionEntry } from "@mariozechner/pi-coding-agent";
+
+import { buildTrace } from "../src/transform.ts";
 import type { ThinkingLevel } from "../src/types.ts";
 
 // ---------------------------------------------------------------------------
-// Helpers for building test entries
+// Entry builders
 // ---------------------------------------------------------------------------
 
 let idSeq = 0;
@@ -21,24 +15,16 @@ function nextId(): string {
   return (idSeq++).toString(16).padStart(8, "0");
 }
 
-function resetIds(): void {
-  idSeq = 0;
-}
-
-function makeHeader(
-  overrides: Partial<{ id: string; cwd: string; timestamp: string }> = {},
-) {
-  return {
-    id: overrides.id ?? "test-session-id",
-    cwd: overrides.cwd ?? "/projects/myapp",
-    timestamp: overrides.timestamp ?? "2026-02-17T18:00:00.000Z",
-  };
-}
+const testHeader = {
+  id: "test-session-id",
+  cwd: "/projects/myapp",
+  timestamp: "2026-02-17T18:00:00.000Z",
+};
 
 function thinkingLevelEntry(
   level: ThinkingLevel,
   parentId: string | null,
-): BranchEntry {
+): SessionEntry {
   const id = nextId();
   return {
     type: "thinking_level_change",
@@ -46,14 +32,14 @@ function thinkingLevelEntry(
     parentId,
     timestamp: new Date().toISOString(),
     thinkingLevel: level,
-  };
+  } as unknown as SessionEntry;
 }
 
 function userEntry(
   text: string,
   parentId: string | null,
   ts: number = Date.now(),
-): BranchEntry {
+): SessionEntry {
   const id = nextId();
   return {
     type: "message",
@@ -65,7 +51,7 @@ function userEntry(
       content: [{ type: "text", text }],
       timestamp: ts,
     },
-  };
+  } as unknown as SessionEntry;
 }
 
 function assistantEntry(
@@ -76,7 +62,7 @@ function assistantEntry(
     usage?: { input?: number; output?: number; cost?: { total?: number } };
     ts?: number;
   } = {},
-): BranchEntry {
+): SessionEntry {
   const id = nextId();
   const ts = opts.ts ?? Date.now();
   return {
@@ -89,10 +75,9 @@ function assistantEntry(
       content: blocks,
       model: opts.model ?? "claude-sonnet-4-5",
       usage: opts.usage ?? { input: 100, output: 50, cost: { total: 0.001 } },
-      stopReason: "stop",
       timestamp: ts,
     },
-  };
+  } as unknown as SessionEntry;
 }
 
 function toolResultEntry(
@@ -104,7 +89,7 @@ function toolResultEntry(
     output?: string;
     ts?: number;
   } = {},
-): BranchEntry {
+): SessionEntry {
   const id = nextId();
   const ts = opts.ts ?? Date.now();
   return {
@@ -120,290 +105,258 @@ function toolResultEntry(
       isError: opts.isError ?? false,
       timestamp: ts,
     },
-  };
-}
-
-function modelChangeEntry(
-  provider: string,
-  modelId: string,
-  parentId: string | null,
-): BranchEntry {
-  const id = nextId();
-  return {
-    type: "model_change",
-    id,
-    parentId,
-    timestamp: new Date().toISOString(),
-  };
+  } as unknown as SessionEntry;
 }
 
 // ---------------------------------------------------------------------------
-// Tests: buildPublishedSession – thinking level extraction
+// Turn splitting
 // ---------------------------------------------------------------------------
 
-describe("buildPublishedSession", () => {
-  describe("thinking level", () => {
-    it("assigns thinking level from preceding thinking_level_change entry", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        thinkingLevelEntry("high", null),
-        userEntry("hello", "00000000", 1000),
-        assistantEntry(
-          [{ type: "text", text: "hi" }],
-          "00000001",
-          { ts: 2000 },
-        ),
-      ];
+describe("turn splitting", () => {
+  beforeEach(() => {
+    idSeq = 0;
+  });
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 1);
-      assert.equal(result.turns[0].thinkingLevel, "high");
-    });
+  it("splits at user messages", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("first", null, 1000),
+        assistantEntry([{ type: "text", text: "r1" }], "00000000", { ts: 2000 }),
+        userEntry("second", "00000001", 3000),
+        assistantEntry([{ type: "text", text: "r2" }], "00000002", { ts: 4000 }),
+      ],
+      "Test",
+    );
 
-    it("tracks thinking level changes across multiple turns", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
+    assert.equal(trace.turns.length, 2);
+    assert.equal(trace.turns[0].prompt, "first");
+    assert.equal(trace.turns[1].prompt, "second");
+  });
+
+  it("tracks thinking level changes across turns", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
         thinkingLevelEntry("high", null),
         userEntry("first", "00000000", 1000),
-        assistantEntry(
-          [{ type: "text", text: "reply 1" }],
-          "00000001",
-          { ts: 2000 },
-        ),
+        assistantEntry([{ type: "text", text: "r1" }], "00000001", { ts: 2000 }),
         thinkingLevelEntry("low", "00000002"),
         userEntry("second", "00000003", 3000),
-        assistantEntry(
-          [{ type: "text", text: "reply 2" }],
-          "00000004",
-          { ts: 4000 },
-        ),
-      ];
+        assistantEntry([{ type: "text", text: "r2" }], "00000004", { ts: 4000 }),
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 2);
-      assert.equal(result.turns[0].thinkingLevel, "high");
-      assert.equal(result.turns[1].thinkingLevel, "low");
-    });
+    assert.equal(trace.turns[0].metadata.thinkingLevel, "high");
+    assert.equal(trace.turns[1].metadata.thinkingLevel, "low");
+  });
 
-    it("uses the last thinking level when multiple changes precede a turn", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
+  it("carries thinking level forward when unchanged", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        thinkingLevelEntry("medium", null),
+        userEntry("first", "00000000", 1000),
+        assistantEntry([{ type: "text", text: "r1" }], "00000001", { ts: 2000 }),
+        userEntry("second", "00000002", 3000),
+        assistantEntry([{ type: "text", text: "r2" }], "00000003", { ts: 4000 }),
+      ],
+      "Test",
+    );
+
+    assert.equal(trace.turns[0].metadata.thinkingLevel, "medium");
+    assert.equal(trace.turns[1].metadata.thinkingLevel, "medium");
+  });
+
+  it("uses last thinking level when multiple changes precede a turn", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
         thinkingLevelEntry("high", null),
         thinkingLevelEntry("off", "00000000"),
         thinkingLevelEntry("xhigh", "00000001"),
         userEntry("hello", "00000002", 1000),
-        assistantEntry(
-          [{ type: "text", text: "hi" }],
-          "00000003",
-          { ts: 2000 },
-        ),
-      ];
+        assistantEntry([{ type: "text", text: "hi" }], "00000003", { ts: 2000 }),
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].thinkingLevel, "xhigh");
-    });
-
-    it("carries thinking level forward when no change between turns", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        thinkingLevelEntry("medium", null),
-        userEntry("first", "00000000", 1000),
-        assistantEntry(
-          [{ type: "text", text: "r1" }],
-          "00000001",
-          { ts: 2000 },
-        ),
-        // no thinking_level_change here
-        userEntry("second", "00000002", 3000),
-        assistantEntry(
-          [{ type: "text", text: "r2" }],
-          "00000003",
-          { ts: 4000 },
-        ),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].thinkingLevel, "medium");
-      assert.equal(result.turns[1].thinkingLevel, "medium");
-    });
-
-    it("omits thinkingLevel when no thinking_level_change entries exist", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("hello", null, 1000),
-        assistantEntry(
-          [{ type: "text", text: "hi" }],
-          "00000000",
-          { ts: 2000 },
-        ),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 1);
-      assert.equal(result.turns[0].thinkingLevel, undefined);
-      assert.ok(!("thinkingLevel" in result.turns[0]));
-    });
-
-    it("handles thinking level change between assistant messages mid-turn", () => {
-      // thinking_level_change between turns, not mid-turn (branch entries
-      // are chronological — thinking level only changes between turns)
-      resetIds();
-      const entries: BranchEntry[] = [
-        thinkingLevelEntry("xhigh", null),
-        userEntry("start", "00000000", 1000),
-        assistantEntry(
-          [{ type: "text", text: "long response" }],
-          "00000001",
-          { ts: 5000 },
-        ),
-        thinkingLevelEntry("off", "00000002"),
-        thinkingLevelEntry("minimal", "00000003"),
-        thinkingLevelEntry("low", "00000004"),
-        thinkingLevelEntry("medium", "00000005"),
-        thinkingLevelEntry("high", "00000006"),
-        userEntry("next", "00000007", 10000),
-        assistantEntry(
-          [{ type: "text", text: "shorter" }],
-          "00000008",
-          { ts: 11000 },
-        ),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].thinkingLevel, "xhigh");
-      assert.equal(result.turns[1].thinkingLevel, "high");
-    });
-
-    it("handles all thinking levels", () => {
-      resetIds();
-      const levels: ThinkingLevel[] = [
-        "off",
-        "minimal",
-        "low",
-        "medium",
-        "high",
-        "xhigh",
-      ];
-      const entries: BranchEntry[] = [];
-      let parentId: string | null = null;
-
-      for (const level of levels) {
-        const tlEntry = thinkingLevelEntry(level, parentId);
-        entries.push(tlEntry);
-        parentId = tlEntry.id;
-
-        const uEntry = userEntry(`prompt at ${level}`, parentId, 1000 + idSeq * 1000);
-        entries.push(uEntry);
-        parentId = uEntry.id;
-
-        const aEntry = assistantEntry(
-          [{ type: "text", text: `reply at ${level}` }],
-          parentId,
-          { ts: 2000 + idSeq * 1000 },
-        );
-        entries.push(aEntry);
-        parentId = aEntry.id;
-      }
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 6);
-      for (let i = 0; i < levels.length; i++) {
-        assert.equal(result.turns[i].thinkingLevel, levels[i]);
-      }
-    });
+    assert.equal(trace.turns[0].metadata.thinkingLevel, "xhigh");
   });
 
-  describe("turn splitting and step extraction", () => {
-    it("splits turns at user messages", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("first", null, 1000),
-        assistantEntry(
-          [{ type: "text", text: "r1" }],
-          "00000000",
-          { ts: 2000 },
-        ),
-        userEntry("second", "00000001", 3000),
-        assistantEntry(
-          [{ type: "text", text: "r2" }],
-          "00000002",
-          { ts: 4000 },
-        ),
-      ];
+  it("omits thinkingLevel when no thinking_level_change entries exist", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("hello", null, 1000),
+        assistantEntry([{ type: "text", text: "hi" }], "00000000", { ts: 2000 }),
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 2);
-      assert.equal(result.turns[0].prompt, "first");
-      assert.equal(result.turns[1].prompt, "second");
-    });
+    assert.ok(!("thinkingLevel" in trace.turns[0].metadata));
+  });
+});
 
-    it("extracts thinking steps (strips whitespace-only)", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
+// ---------------------------------------------------------------------------
+// Completion
+// ---------------------------------------------------------------------------
+
+describe("completion", () => {
+  beforeEach(() => {
+    idSeq = 0;
+  });
+
+  it("converts thinking blocks to narration steps", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
         userEntry("go", null, 1000),
         assistantEntry(
           [
-            { type: "thinking", thinking: "let me think about this" },
+            { type: "thinking", thinking: "let me think" },
+            { type: "text", text: "done" },
+          ],
+          "00000000",
+          { ts: 2000 },
+        ),
+      ],
+      "Test",
+    );
+
+    const { steps, response } = trace.turns[0].completion;
+    assert.equal(steps.length, 1);
+    assert.deepEqual(steps[0], { type: "narration", text: "let me think" });
+    assert.equal(response, "done");
+  });
+
+  it("drops empty thinking blocks", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [
             { type: "thinking", thinking: "   " },
             { type: "text", text: "done" },
           ],
           "00000000",
           { ts: 2000 },
         ),
-      ];
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].steps.length, 2);
-      assert.deepEqual(result.turns[0].steps[0], {
-        type: "thinking",
-        text: "let me think about this",
-      });
-      assert.deepEqual(result.turns[0].steps[1], { type: "text", text: "done" });
-    });
+    assert.equal(trace.turns[0].completion.steps.length, 0);
+    assert.equal(trace.turns[0].completion.response, "done");
+  });
 
-    it("extracts tool steps and matches tool results", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("read it", null, 1000),
+  it("treats mid-stream text as narration when tool calls present", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
         assistantEntry(
           [
-            {
-              type: "toolCall",
-              id: "call-1",
-              name: "read",
-              arguments: { path: "/projects/myapp/src/main.ts" },
-            },
+            { type: "text", text: "Let me read that file" },
+            { type: "toolCall", id: "c1", name: "read", arguments: { path: "/projects/myapp/f.ts" } },
           ],
           "00000000",
           { ts: 2000 },
         ),
-        toolResultEntry("call-1", "read", "00000001", { ts: 3000 }),
-      ];
+        toolResultEntry("c1", "read", "00000001", { output: "contents", ts: 3000 }),
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].steps.length, 1);
-      const step = result.turns[0].steps[0];
-      assert.equal(step.type, "tool");
-      if (step.type === "tool") {
-        assert.equal(step.name, "read");
-        assert.equal(step.args, "src/main.ts");
-        assert.equal(step.ok, true);
-      }
-    });
+    const { steps } = trace.turns[0].completion;
+    assert.equal(steps.length, 2);
+    assert.deepEqual(steps[0], { type: "narration", text: "Let me read that file" });
+    assert.equal(steps[1].type, "action");
+  });
 
-    it("includes output for errored tools", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("run it", null, 1000),
+  it("collects text-only assistant messages into response", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [{ type: "toolCall", id: "c1", name: "bash", arguments: { command: "ls" } }],
+          "00000000",
+          { ts: 2000 },
+        ),
+        toolResultEntry("c1", "bash", "00000001", { output: "file1", ts: 3000 }),
+        assistantEntry(
+          [{ type: "text", text: "Here are the results." }],
+          "00000002",
+          { ts: 4000 },
+        ),
+      ],
+      "Test",
+    );
+
+    assert.equal(trace.turns[0].completion.steps.length, 1);
+    assert.equal(trace.turns[0].completion.response, "Here are the results.");
+  });
+
+  it("passes raw args on action steps", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [{ type: "toolCall", id: "call-1", name: "read", arguments: { path: "/projects/myapp/src/main.ts" } }],
+          "00000000",
+          { ts: 2000 },
+        ),
+        toolResultEntry("call-1", "read", "00000001", { output: "contents", ts: 3000 }),
+      ],
+      "Test",
+    );
+
+    const action = trace.turns[0].completion.steps[0];
+    assert.equal(action.type, "action");
+    if (action.type === "action") {
+      assert.equal(action.name, "read");
+      assert.deepEqual(action.args, { path: "/projects/myapp/src/main.ts" });
+      assert.equal(action.ok, true);
+    }
+  });
+
+  it("includes output for all tool results", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
         assistantEntry(
           [
-            {
-              type: "toolCall",
-              id: "call-1",
-              name: "bash",
-              arguments: { command: "failing-cmd" },
-            },
+            { type: "toolCall", id: "c-bash", name: "bash", arguments: { command: "ls" } },
+            { type: "toolCall", id: "c-read", name: "read", arguments: { path: "/projects/myapp/f.ts" } },
           ],
+          "00000000",
+          { ts: 2000 },
+        ),
+        toolResultEntry("c-bash", "bash", "00000001", { output: "file1\nfile2", ts: 3000 }),
+        toolResultEntry("c-read", "read", "00000002", { output: "file contents", ts: 3000 }),
+      ],
+      "Test",
+    );
+
+    const bash = trace.turns[0].completion.steps[0];
+    const read = trace.turns[0].completion.steps[1];
+
+    if (bash.type === "action") assert.equal(bash.output, "file1\nfile2");
+    if (read.type === "action") assert.equal(read.output, "file contents");
+  });
+
+  it("marks errored actions", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [{ type: "toolCall", id: "call-1", name: "bash", arguments: { command: "bad-cmd" } }],
           "00000000",
           { ts: 2000 },
         ),
@@ -412,151 +365,115 @@ describe("buildPublishedSession", () => {
           output: "command not found",
           ts: 3000,
         }),
-      ];
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      const step = result.turns[0].steps[0];
-      assert.equal(step.type, "tool");
-      if (step.type === "tool") {
-        assert.equal(step.ok, false);
-        assert.equal(step.output, "command not found");
-      }
-    });
+    const action = trace.turns[0].completion.steps[0];
+    if (action.type === "action") {
+      assert.equal(action.ok, false);
+      assert.equal(action.output, "command not found");
+    }
+  });
+});
 
-    it("includes output for successful bash, omits for read/write/edit", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
+// ---------------------------------------------------------------------------
+// Metadata
+// ---------------------------------------------------------------------------
+
+describe("metadata", () => {
+  beforeEach(() => {
+    idSeq = 0;
+  });
+
+  it("aggregates tokens and cost across assistant messages", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
         userEntry("go", null, 1000),
         assistantEntry(
-          [
-            {
-              type: "toolCall",
-              id: "call-bash",
-              name: "bash",
-              arguments: { command: "ls" },
-            },
-            {
-              type: "toolCall",
-              id: "call-read",
-              name: "read",
-              arguments: { path: "/projects/myapp/f.ts" },
-            },
-          ],
-          "00000000",
-          { ts: 2000 },
-        ),
-        toolResultEntry("call-bash", "bash", "00000001", {
-          output: "file1\nfile2",
-          ts: 3000,
-        }),
-        toolResultEntry("call-read", "read", "00000002", {
-          output: "contents of file",
-          ts: 3000,
-        }),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      const bashStep = result.turns[0].steps[0];
-      const readStep = result.turns[0].steps[1];
-
-      assert.equal(bashStep.type, "tool");
-      assert.equal(readStep.type, "tool");
-      if (bashStep.type === "tool") {
-        assert.equal(bashStep.output, "file1\nfile2");
-      }
-      if (readStep.type === "tool") {
-        assert.equal(readStep.output, undefined);
-      }
-    });
-
-    it("carries diff data for edit tool steps", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("edit it", null, 1000),
-        assistantEntry(
-          [
-            {
-              type: "toolCall",
-              id: "call-1",
-              name: "edit",
-              arguments: {
-                path: "/projects/myapp/src/main.ts",
-                oldText: "foo",
-                newText: "bar",
-              },
-            },
-          ],
-          "00000000",
-          { ts: 2000 },
-        ),
-        toolResultEntry("call-1", "edit", "00000001", { ts: 3000 }),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      const step = result.turns[0].steps[0];
-      assert.equal(step.type, "tool");
-      if (step.type === "tool") {
-        assert.deepEqual(step.diff, {
-          path: "src/main.ts",
-          oldText: "foo",
-          newText: "bar",
-        });
-      }
-    });
-
-    it("aggregates tokens and cost across assistant messages in a turn", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        userEntry("go", null, 1000),
-        assistantEntry(
-          [
-            {
-              type: "toolCall",
-              id: "call-1",
-              name: "bash",
-              arguments: { command: "echo 1" },
-            },
-          ],
+          [{ type: "toolCall", id: "c1", name: "bash", arguments: { command: "echo 1" } }],
           "00000000",
           { model: "claude-sonnet-4-5", usage: { input: 100, output: 50, cost: { total: 0.001 } }, ts: 2000 },
         ),
-        toolResultEntry("call-1", "bash", "00000001", { ts: 2500 }),
+        toolResultEntry("c1", "bash", "00000001", { ts: 2500 }),
         assistantEntry(
           [{ type: "text", text: "done" }],
           "00000002",
           { model: "claude-sonnet-4-5", usage: { input: 200, output: 80, cost: { total: 0.002 } }, ts: 3000 },
         ),
-      ];
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns[0].inputTokens, 300);
-      assert.equal(result.turns[0].outputTokens, 130);
-      assert.equal(result.turns[0].cost, 0.003);
-    });
-
-    it("skips non-message, non-thinking_level entries", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
-        modelChangeEntry("anthropic", "claude-sonnet-4-5", null),
-        thinkingLevelEntry("high", "00000000"),
-        userEntry("hi", "00000001", 1000),
-        assistantEntry(
-          [{ type: "text", text: "hello" }],
-          "00000002",
-          { ts: 2000 },
-        ),
-      ];
-
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.turns.length, 1);
-      assert.equal(result.turns[0].thinkingLevel, "high");
-    });
+    const { metadata } = trace.turns[0];
+    assert.equal(metadata.inputTokens, 300);
+    assert.equal(metadata.outputTokens, 130);
+    assert.equal(metadata.cost, 0.003);
+    assert.equal(metadata.model, "claude-sonnet-4-5");
   });
 
-  describe("session metadata", () => {
-    it("computes totalCost as sum of turn costs", () => {
-      resetIds();
-      const entries: BranchEntry[] = [
+  it("computes elapsed from prompt to last message", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [{ type: "toolCall", id: "c1", name: "bash", arguments: { command: "ls" } }],
+          "00000000",
+          { ts: 5000 },
+        ),
+        toolResultEntry("c1", "bash", "00000001", { ts: 8000 }),
+        assistantEntry(
+          [{ type: "text", text: "done" }],
+          "00000002",
+          { ts: 10000 },
+        ),
+      ],
+      "Test",
+    );
+
+    assert.equal(trace.turns[0].metadata.elapsed, 9);
+  });
+
+  it("uses last model seen", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
+        userEntry("go", null, 1000),
+        assistantEntry(
+          [{ type: "text", text: "a" }],
+          "00000000",
+          { model: "model-a", ts: 2000 },
+        ),
+        userEntry("more", "00000001", 3000),
+        assistantEntry(
+          [{ type: "text", text: "b" }],
+          "00000002",
+          { model: "model-b", ts: 4000 },
+        ),
+      ],
+      "Test",
+    );
+
+    assert.equal(trace.turns[0].metadata.model, "model-a");
+    assert.equal(trace.turns[1].metadata.model, "model-b");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Trace
+// ---------------------------------------------------------------------------
+
+describe("trace", () => {
+  beforeEach(() => {
+    idSeq = 0;
+  });
+
+  it("computes totalCost as sum of turn costs", () => {
+    const trace = buildTrace(
+      testHeader,
+      [
         userEntry("first", null, 1000),
         assistantEntry(
           [{ type: "text", text: "r1" }],
@@ -569,159 +486,25 @@ describe("buildPublishedSession", () => {
           "00000002",
           { usage: { input: 20, output: 10, cost: { total: 0.02 } }, ts: 4000 },
         ),
-      ];
+      ],
+      "Test",
+    );
 
-      const result = buildPublishedSession(makeHeader(), entries, "test");
-      assert.equal(result.session.totalCost, 0.03);
-    });
+    assert.equal(trace.totalCost, 0.03);
+  });
 
-    it("uses provided title and header fields", () => {
-      resetIds();
-      const header = makeHeader({
-        id: "abc-123",
-        timestamp: "2026-01-01T00:00:00.000Z",
-      });
-      const entries: BranchEntry[] = [
+  it("uses provided title and header fields", () => {
+    const trace = buildTrace(
+      { id: "abc-123", cwd: "/tmp", timestamp: "2026-01-01T00:00:00.000Z" },
+      [
         userEntry("hi", null, 1000),
-        assistantEntry(
-          [{ type: "text", text: "yo" }],
-          "00000000",
-          { ts: 2000 },
-        ),
-      ];
+        assistantEntry([{ type: "text", text: "yo" }], "00000000", { ts: 2000 }),
+      ],
+      "My Title",
+    );
 
-      const result = buildPublishedSession(header, entries, "My Title");
-      assert.equal(result.session.id, "abc-123");
-      assert.equal(result.session.title, "My Title");
-      assert.equal(result.session.date, "2026-01-01T00:00:00.000Z");
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: titleFromFirstUserLine
-// ---------------------------------------------------------------------------
-
-describe("titleFromFirstUserLine", () => {
-  it("extracts first line from first user message", () => {
-    const title = titleFromFirstUserLine([
-      {
-        role: "user",
-        content: [{ type: "text", text: "Hello world\nMore text" }],
-      },
-    ]);
-    assert.equal(title, "Hello world");
-  });
-
-  it("truncates to 30 characters", () => {
-    const title = titleFromFirstUserLine([
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "This is a very long prompt that exceeds the thirty character limit",
-          },
-        ],
-      },
-    ]);
-    assert.equal(title.length, 30);
-  });
-
-  it("handles string content", () => {
-    const title = titleFromFirstUserLine([{ role: "user", content: "simple string" }]);
-    assert.equal(title, "simple string");
-  });
-
-  it("returns default when no user messages", () => {
-    const title = titleFromFirstUserLine([{ role: "assistant", content: "hi" }]);
-    assert.equal(title, "Shared session");
-  });
-
-  it("skips assistant messages to find user", () => {
-    const title = titleFromFirstUserLine([
-      { role: "assistant", content: "ignored" },
-      { role: "user", content: [{ type: "text", text: "Found it" }] },
-    ]);
-    assert.equal(title, "Found it");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: shortenPath
-// ---------------------------------------------------------------------------
-
-describe("shortenPath", () => {
-  it("strips cwd prefix", () => {
-    assert.equal(shortenPath("/projects/myapp/src/main.ts", "/projects/myapp"), "src/main.ts");
-  });
-
-  it("returns '.' for exact cwd match", () => {
-    assert.equal(shortenPath("/projects/myapp", "/projects/myapp"), ".");
-  });
-
-  it("returns full path when no prefix matches", () => {
-    assert.equal(shortenPath("/tmp/random/file.ts", "/projects/myapp"), "/tmp/random/file.ts");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: summarizeToolArgs
-// ---------------------------------------------------------------------------
-
-describe("summarizeToolArgs", () => {
-  const cwd = "/projects/myapp";
-
-  it("shortens path for read/write/edit", () => {
-    assert.equal(summarizeToolArgs("read", { path: "/projects/myapp/src/a.ts" }, cwd), "src/a.ts");
-    assert.equal(summarizeToolArgs("write", { path: "/projects/myapp/b.ts" }, cwd), "b.ts");
-    assert.equal(summarizeToolArgs("edit", { path: "/projects/myapp/c.ts" }, cwd), "c.ts");
-  });
-
-  it("uses command for bash", () => {
-    assert.equal(summarizeToolArgs("bash", { command: "ls -la" }, cwd), "ls -la");
-  });
-
-  it("JSON.stringifies unknown tools, truncated at 200", () => {
-    const args = { key: "x".repeat(300) };
-    const result = summarizeToolArgs("custom_tool", args, cwd);
-    assert.ok(result.length <= 201); // 200 + "…"
-    assert.ok(result.endsWith("…"));
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: extractTextContent
-// ---------------------------------------------------------------------------
-
-describe("extractTextContent", () => {
-  it("joins text blocks", () => {
-    const result = extractTextContent([
-      { type: "text", text: "hello" },
-      { type: "image" },
-      { type: "text", text: "world" },
-    ]);
-    assert.equal(result, "hello\nworld");
-  });
-
-  it("returns empty for no text blocks", () => {
-    assert.equal(extractTextContent([{ type: "image" }]), "");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Tests: truncateOutput
-// ---------------------------------------------------------------------------
-
-describe("truncateOutput", () => {
-  it("returns short output unchanged", () => {
-    assert.equal(truncateOutput("short"), "short");
-  });
-
-  it("truncates long output", () => {
-    const long = "a".repeat(5000);
-    const result = truncateOutput(long);
-    assert.ok(result.length < long.length);
-    assert.ok(result.endsWith("…[truncated]"));
+    assert.equal(trace.id, "abc-123");
+    assert.equal(trace.title, "My Title");
+    assert.equal(trace.date, "2026-01-01T00:00:00.000Z");
   });
 });

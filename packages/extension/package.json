@@ -1,7 +1,7 @@
 {
   "name": "@andreimaxim/pi-publish-extension",
   "version": "0.0.1",
-  "description": "Pi extension for publishing sessions to the web",
+  "description": "Pi extension for publishing session traces",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -21,6 +21,5 @@
     ]
   },
   "dependencies": {
-    "marked": "^15.0.12"
   }
 }

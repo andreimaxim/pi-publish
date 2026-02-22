@@ -83,14 +83,25 @@ TypeScript works without compilation (loaded via [jiti](https://github.com/unjs/
 
 ## Key APIs Used by the Extension
 
-- **`pi.registerCommand()`** — Registers the `/publish` slash command.
+- **`pi.registerCommand()`** — Registers the `/publish` and `/unpublish` slash commands.
 - **`ctx.sessionManager.getHeader()`** — Session metadata (id, cwd, timestamp). Returns `SessionHeader | null`.
 - **`ctx.sessionManager.getBranch()`** — Current branch entries from leaf to root.
 - **`ctx.hasUI`** — Guards against running in non-interactive modes (print, JSON).
 - **`ctx.ui.notify()`** — Shows toast notifications.
 - **`ctx.model` / `ctx.modelRegistry.getApiKey()`** — Access current model for title generation.
 - **`complete()` from `@mariozechner/pi-ai`** — Direct LLM calls (used for title generation).
-- **Theme API** (`theme.fg()`, `theme.bold()`) — All text styling goes through the theme for consistency.
+
+## Server API Contract
+
+The extension talks to a self-hosted server (Cloudflare Worker) via HTTP. The server URL is configured via `PI_PUBLISH_URL` (no default — must be set).
+
+| Action | Method | Endpoint | Body |
+|---|---|---|---|
+| Publish | `PUT` | `/api/sessions/:id` | `PublishedSession` JSON |
+| Unpublish | `DELETE` | `/api/sessions/:id` | — |
+| View (HTML) | `GET` | `/s/:id` | — |
+
+The session UUID is the key for all operations.
 
 ## Published Session JSON Schema
 
@@ -195,11 +206,11 @@ The server will serve a static HTML template with embedded CSS/JS. The published
 ### Extension (`packages/extension`)
 1. **Read the docs first.** Load `extensions.md` and `tui.md` before making changes.
 2. **Type-check with tsgo.** Run `npx tsgo -p packages/extension/tsconfig.json` before committing.
-3. **Use the theme for all colors.** Never hardcode ANSI escapes for foreground text — use `theme.fg("accent", ...)`, `theme.fg("muted", ...)`, etc.
-4. **Keep output truncated.** Tool output is capped at 4KB. If adding new tool types, decide on output inclusion rules.
-5. **Handle cancellation.** All async work should respect `AbortSignal`.
-6. **Test interactively.** Run `pi` and type `/publish` to verify changes. Use `/reload` to pick up modifications without restarting.
-7. **Note on `getHeader()`**: Returns `SessionHeader | null`. The extension uses `!` assertions after the `branch.length === 0` early-return guard.
+3. **Keep output truncated.** Tool output is capped at 4KB. If adding new tool types, decide on output inclusion rules.
+4. **Handle cancellation.** All async work should respect `AbortSignal`.
+5. **Test interactively.** Run `pi` and type `/publish` or `/unpublish` to verify changes. Use `/reload` to pick up modifications without restarting.
+6. **Note on `getHeader()`**: Returns `SessionHeader | null`. The extension uses `!` assertions after the `branch.length === 0` early-return guard.
+7. **`PI_PUBLISH_URL` must be set.** Both commands bail early with a notification if it's missing.
 
 ### Server (`packages/server`)
 1. **Use `wrangler dev`** (or `npm run dev:server` from root) for local development.
